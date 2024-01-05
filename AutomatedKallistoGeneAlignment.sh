@@ -19,7 +19,7 @@ read -p "Enter the absolute path to the reference genome file (containing a *.fa
 # Prompt the user for the threads to be used
 read -p "Enter the number of threads available in your machine: " threads
 
-echo "Input folder: $input_folder"
+echo "Input folder:  $input_folder"
 echo "Genome file: $genome_file"
 
 # Analyze .gz files with FastQC
@@ -43,12 +43,12 @@ for input_file in "$input_folder"/*.gz; do
     base_name=$(basename -s .fastq.gz "$input_file")
 
     # Create an output folder for the sample
-    sample_output_folder="/home/andresunix/rnaseq/new_AKG/kallisto/$base_name"
+    sample_output_folder="~/new_AKG/kallisto/$base_name"
     mkdir -p "$sample_output_folder"
     echo "-> The sample $base_name is being aligned now by Kallisto"
 
     # Run kallisto quant for each input file
-    kallisto quant -i "/home/andresunix/rnaseq/new_AKG/index/Homo_sapiens.GRCh38.cdna.all.index" -o "$sample_output_folder" -t "$threads" --single -l 250 -s 30 "$input_file" > "$sample_output_folder/$base_name.log" 2>&1
+    kallisto quant -i "~/new_AKG/index/Homo_sapiens.GRCh38.cdna.all.index" -o "$sample_output_folder" -t "$threads" --single -l 250 -s 30 "$input_file" > "$sample_output_folder/$base_name.log" 2>&1
     echo "-> Kallisto has finished aligning $base_name, a log file has also been produced"
 done
 
