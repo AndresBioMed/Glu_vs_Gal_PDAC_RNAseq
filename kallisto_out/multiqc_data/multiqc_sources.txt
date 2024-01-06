@@ -1,0 +1,13 @@
+Module	Section	Sample Name	Source
+Kallisto	all_sections	kallisto | ERR4508082 | ERR4508082	/home/andresunix/new_AKG/kallisto/ERR4508082/ERR4508082.log
+Kallisto	all_sections	kallisto | ERR4508081 | ERR4508081	/home/andresunix/new_AKG/kallisto/ERR4508081/ERR4508081.log
+Kallisto	all_sections	kallisto | ERR4508080 | ERR4508080	/home/andresunix/new_AKG/kallisto/ERR4508080/ERR4508080.log
+Kallisto	all_sections	kallisto | ERR4508079 | ERR4508079	/home/andresunix/new_AKG/kallisto/ERR4508079/ERR4508079.log
+Kallisto	all_sections	kallisto | ERR4508084 | ERR4508084	/home/andresunix/new_AKG/kallisto/ERR4508084/ERR4508084.log
+Kallisto	all_sections	kallisto | ERR4508083 | ERR4508083	/home/andresunix/new_AKG/kallisto/ERR4508083/ERR4508083.log
+FastQC	all_sections	fastqc | ERR4508081	/home/andresunix/new_AKG/fastqc/ERR4508081_fastqc.zip
+FastQC	all_sections	fastqc | ERR4508084	/home/andresunix/new_AKG/fastqc/ERR4508084_fastqc.zip
+FastQC	all_sections	fastqc | ERR4508080	/home/andresunix/new_AKG/fastqc/ERR4508080_fastqc.zip
+FastQC	all_sections	fastqc | ERR4508079	/home/andresunix/new_AKG/fastqc/ERR4508079_fastqc.zip
+FastQC	all_sections	fastqc | ERR4508083	/home/andresunix/new_AKG/fastqc/ERR4508083_fastqc.zip
+FastQC	all_sections	fastqc | ERR4508082	/home/andresunix/new_AKG/fastqc/ERR4508082_fastqc.zip
