@@ -31,11 +31,13 @@ fastqc *.gz -t $threads
 cd $input_folder
 mv *fastqc* ~/new_AKG/fastqc
 echo "--> AKG has finished analyzing the quality of your samples with FastQC"
-echo "--> AKG will now create an index based on your refernce genome"
+echo "--> AKG will now create an index based on your reference genome"
 # create the index for the reference genome
 cd ~/new_AKG/index
 kallisto index -i Homo_sapiens.GRCh38.cdna.all.index $genome_file
 echo "--> AKG has finished the index"
+
+cd ~/new_AKG/kallisto
 
 # Iterate through all ".gz" files in the input folder
 for input_file in "$input_folder"/*.gz; do
@@ -48,7 +50,7 @@ for input_file in "$input_folder"/*.gz; do
     echo "-> The sample $base_name is being aligned now by Kallisto"
 
     # Run kallisto quant for each input file
-    kallisto quant -i "~/new_AKG/index/Homo_sapiens.GRCh38.cdna.all.index" -o "$sample_output_folder" -t "$threads" --single -l 250 -s 30 "$input_file" > "$sample_output_folder/$base_name.log" 2>&1
+    kallisto quant -i "~/new_AKG/index/Homo_sapiens.GRCh38.cdna.all.index" -o "$sample_output_folder" -t "$threads" --single -l 250 -s 30 "$input_folder/$input_file" > "$sample_output_folder/$base_name.log" 2>&1
     echo "-> Kallisto has finished aligning $base_name, a log file has also been produced"
 done
 
