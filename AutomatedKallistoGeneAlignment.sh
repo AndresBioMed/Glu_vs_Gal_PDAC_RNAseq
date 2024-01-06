@@ -1,7 +1,7 @@
 #!/bin/bash
 
-echo "----Wellcome to Automated Kallisto Gene alignment [AKG]----"
-echo "-- Made by Andrés Gordo, 2023 --"
+echo "----Welcome to Automated Kallisto Gene alignment [AKG]----"
+echo "-- Made by Andrés Gordo, 2023-2024 --"
 echo "This script will align all your samples in a new folder using Kallisto, and checking their quality with FastQC and MultiQC."
 
 # create the folders for the output
@@ -24,20 +24,20 @@ echo "Genome file: $genome_file"
 
 # Analyze .gz files with FastQC
 echo "--> AKG will now analyze the quality of your samples with FastQC"
-cd $input_folder
+cd $input_folder || exit
 fastqc *.gz -t $threads
 
 # Move files to the fastqc folder
-cd $input_folder
+cd $input_folder || exit
 mv *fastqc* ~/new_AKG/fastqc
 echo "--> AKG has finished analyzing the quality of your samples with FastQC"
 echo "--> AKG will now create an index based on your reference genome"
 # create the index for the reference genome
-cd ~/new_AKG/index
+cd ~/new_AKG/index ||  exit
 kallisto index -i Homo_sapiens.GRCh38.cdna.all.index $genome_file
 echo "--> AKG has finished the index"
 
-cd ~/new_AKG/kallisto
+cd ~/new_AKG/kallisto || exit
 
 # Iterate through all ".gz" files in the input folder
 for input_file in "$input_folder"/*.gz; do
@@ -57,6 +57,6 @@ done
 echo "--> AKG has now Finished processing all your samples"
 echo "Summarising results via MultiQ"
 
-cd ~/new_AKG
+cd ~/new_AKG || exit
 multiqc -d .
 echo "AKG has finished, the final report has ben produced alongside with the pseudoalignments"
