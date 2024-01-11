@@ -1,0 +1,13 @@
+{
+	"n_targets": 207249,
+	"n_bootstraps": 0,
+	"n_processed": 4000000,
+	"n_pseudoaligned": 3420904,
+	"n_unique": 578058,
+	"p_pseudoaligned": 85.5,
+	"p_unique": 14.5,
+	"kallisto_version": "0.48.0",
+	"index_version": 10,
+	"start_time": "Thu Jan 11 16:49:05 2024",
+	"call": "kallisto quant -i /home/andresunix/new_AKG/index/Homo_sapiens.GRCh38.cdna.all.index -o ERR978118 -t 8 --single -l 250 -s 30 /home/andresunix/csc_rawdata/ERR978118.fastq.gz"
+}
