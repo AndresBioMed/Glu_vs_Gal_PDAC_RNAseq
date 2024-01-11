@@ -146,8 +146,9 @@ p1 <- ggplot(log2.cpm.df.pivot) +
   theme_bw()
 
 cpm <- cpm(myDGEList)
-myDGEList.filtered <- myDGEList[keepers,]
-keepers <- rowSums(cpm>1)>=11 #user defined
+samples_nodepth<-targets$sample %in% c("ERR978114","ERR978122","ERR978189","ERR978196")
+cpm <- cpm[,-samples_nodepth]
+keepers <- rowSums(cpm>1)>=9 #user defined
 myDGEList.filtered <- myDGEList[keepers,]
 
 log2.cpm.filtered <- cpm(myDGEList.filtered, log=TRUE)
