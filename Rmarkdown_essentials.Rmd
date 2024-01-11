@@ -27,13 +27,11 @@ knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
 
 ## Introduction
 
-During the Spring 2020 offering of [**DIYtranscriptomics**](http://diytranscriptomics.com/), we analyzed a subset of patients and healthy controls from [Amorim et al., 2019](https://doi.org/10.1126/scitranslmed.aax4204). This reproducible and dynamic report was created using Rmarkdown and the [Knitr package](https://yihui.name/knitr/), and summarizes the basic code and outputs (plots, tables, etc) produced during the course.
 
 ------------------------------------------------------------------------
 
 ## R packages used
 
-A variety of R packages was used for this analysis. All graphics and data wrangling were handled using the [tidyverse suite of packages](https://www.tidyverse.org/). All packages used are available from the Comprehensive R Archive Network (CRAN), Bioconductor.org, or Github.
 
 ------------------------------------------------------------------------
 
@@ -41,11 +39,11 @@ A variety of R packages was used for this analysis. All graphics and data wrangl
 
 ### Software
 
-Raw reads from [ENA](https://www.ebi.ac.uk/ena/browser/view/PRJEB40037) -- Project: *PRJEB40037* --  were mapped to the human reference transcriptome *GRCh38.cdna* using [Kallisto](https://pachterlab.github.io/kallisto/) The quality of raw reads and mapping, as well as the version used are summarized in [this summary report](http://DIYtranscriptomics.github.io/Data/files/multiqc_report.html) generated using [fastqc](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) and [multiqc](https://multiqc.info/).
+Raw reads from [ENA](https://www.ebi.ac.uk/ena/browser/view/PRJEB10204) -- Project: *PRJEB10204* --  were mapped to the human reference transcriptome *GRCh38.cdna* using [Kallisto](https://pachterlab.github.io/kallisto/) The quality of raw reads and mapping, as well as the version used are summarized in [this summary report](http://DIYtranscriptomics.github.io/Data/files/multiqc_report.html) generated using [fastqc](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) and [multiqc](https://multiqc.info/).
 
 ### Aligning raw reads with Kallisto
 
-In this project there are a total of 6 single-end samples consisting of 3 replicates of 2 conditions; **with Glucose** or **with Galactose**. For each sample *fastqc* was run to determine the quality of the sequencing. Kallisto was then used to pseudo-align the samples to the most updated reference human genome. Although I provide a suitable code for performing the aligning, a fully tailored automatic script [Automatic Kallisto Gene aligner](https://github.com/AndresBioMed/Glu_vs_Gal_PDAC_RNAseq/blob/main/AutomatedKallistoGeneAlignment.sh) was written *ad hoc* in order to facilitate multiple sample analysis. It only needs the *.fastqc.gz* files, and a cDNA [reference genome](https://www.ensembl.org/info/data/ftp/index.html).
+In this project there are a total of 6 single-end samples consisting of 3 replicates of 2 conditions; **with adherent media** or **with sphere media**. For each sample *fastqc* was run to determine the quality of the sequencing. Kallisto was then used to pseudo-align the samples to the most updated reference human genome. Although I provide a suitable code for performing the aligning, a fully tailored automatic script [Automatic Kallisto Gene aligner](https://github.com/AndresBioMed/Glu_vs_Gal_PDAC_RNAseq/blob/main/AutomatedKallistoGeneAlignment.sh) was written *ad hoc* in order to facilitate multiple sample analysis. It only needs the *.fastqc.gz* files, and a cDNA [reference genome](https://www.ensembl.org/info/data/ftp/index.html).
 
 ```{bash fastqc}
 fastqc *.gz -t 8 #the last argument allows for quad core processing
@@ -148,6 +146,7 @@ p1 <- ggplot(log2.cpm.df.pivot) +
   theme_bw()
 
 cpm <- cpm(myDGEList)
+myDGEList.filtered <- myDGEList[keepers,]
 keepers <- rowSums(cpm>1)>=11 #user defined
 myDGEList.filtered <- myDGEList[keepers,]
 
