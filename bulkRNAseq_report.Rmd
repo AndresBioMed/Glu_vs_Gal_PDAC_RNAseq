@@ -264,7 +264,7 @@ According to *fastqc* results, a total of `r sum(samples_nodepth)` samples were 
 
 ------------------------------------------------------------------------
 
-### table of filtered and normalized data
+### table of filtered and normalised data
 
 ```{r step 3 - multivariate part 1 (data table)}
 library(DT)
@@ -276,11 +276,29 @@ mydata.df <- mutate(log2.cpm.filtered.norm.df,
 )/8, 
                     sph.AVG = (ERR978193+ERR978184+ERR978185+ERR978186+ERR978187+ERR978191+ERR978194+ERR978195
 )/8,
-                    #now make columns comparing each of the averages above that you're interested in
-                    LogFC = (sph.AVG - adh.AVG)) %>% #note that this is the first time you've seen the 'pipe' operator
+                    
+                    LogFC = (sph.AVG - adh.AVG)) %>% 
   mutate_if(is.numeric, round, 2)
+dir.create("report/tables", showWarnings = FALSE, recursive = TRUE)
+write.csv(mydata.df, "report/tables/table_1.csv", row.names = FALSE)
 
-datatable(mydata.df[,c(1,(ncol(mydata.df)-2):ncol(mydata.df))], 
+scatter <- ggplot(mydata.df) + 
+  aes(x=adh.AVG, y=sph.AVG, color=abs(LogFC)) +
+  geom_point(shape=16, size=1) +
+  ggtitle("sph vs. adh") +
+  theme_bw()
+save_plot("report/plots/scatter.svg",scatter, base_width = 10, base_height = 10)
+save_plot("report/plots/scatter.png",scatter, base_width = 10, base_height = 10)
+# only in html ggplotly(scatter)
+scatter
+```
+
+```{r step 3 - multivariate part 1 (data table), eval=FALSE}
+```
+
+```{r datable -only in html, eval=FALSE}
+datatable(mydata.df[,c(1,(ncol(mydata.df)-2):ncol(mydata.df))],
+          caption = 'Table 1: Filtered and Normalised Genes',
           extensions = c('KeyTable', "FixedHeader"), 
           filter = 'top',
           options = list(keys = TRUE, 
@@ -356,6 +374,7 @@ save_plot("report/plots/pca_sm.svg",small_multiples_plot, base_width = 15, base_
 save_plot("report/plots/pca_sm.png",small_multiples_plot, base_width = 15, base_height = 7)
 save_plot("report/plots/all_pca.svg",all_pca, base_width = 15, base_height = 7)
 save_plot("report/plots/all_pca.png",all_pca, base_width = 15, base_height = 7)
+
 all_pca
 ```
 
@@ -364,11 +383,8 @@ all_pca
 ## Volcano plot
 
 ```{r step 5 - diffGenes part 1 (volcano plot)}
-library(tidyverse)
 library(limma)
-library(edgeR) 
 library(gt)
-library(DT) 
 library(plotly) 
 
 design <- model.matrix(~0 + media)
@@ -395,11 +411,12 @@ vplot <- ggplot(myTopHits.df) +
   #annotate("rect", xmin = 1, xmax = 12, ymin = -log10(0.01), ymax = 7.5, alpha=.2, fill="#BE684D") +
   #annotate("rect", xmin = -1, xmax = -12, ymin = -log10(0.01), ymax = 7.5, alpha=.2, fill="#2C467A") +
   labs(title="Volcano plot",
-       subtitle = "Cancer Stem Cells enrichment",
+       subtitle = "Cancer Stem Cells enriched Genes",
        caption=paste0("produced on ", Sys.time())) +
   theme_bw()
 
-ggplotly(vplot)
+# Only in html ggplotly(vplot)
+vplot
 
 
 ```
@@ -415,9 +432,14 @@ results <- decideTests(ebFit, method="global", adjust.method="BH", p.value=0.01,
 colnames(v.DEGList.filtered.norm$E) <- sampleLabels
 diffGenes <- v.DEGList.filtered.norm$E[results[,1] !=0,]
 diffGenes.df <- as_tibble(diffGenes, rownames = "geneID")
+
+write.csv(diffGenes.df, "report/tables/table_2.csv", row.names = FALSE)
+```
+
+```{r table 2 only html, eval=FALSE}
 datatable(diffGenes.df, 
           extensions = c('KeyTable', "FixedHeader"), 
-          caption = 'Table 1: DEGs after Cancer Stem Cells Enrichment',
+          caption = 'Table 2: DEGs after Cancer Stem Cells Enrichment',
           options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100"))) %>%
   formatRound(columns=c(2:17), digits=2)
 ```
@@ -429,7 +451,6 @@ datatable(diffGenes.df,
 Pearson correlation was used to cluster **`r nrow(diffGenes)`** differentially expressed genes, which were then represented as heatmap with the data scaled by Zscore for each row.
 
 ```{r step 6 - modules part 1 (heatmap)}
-library(tidyverse)
 library(gplots)
 library(RColorBrewer)
 myheatcolors <- rev(brewer.pal(name="RdBu", n=11))
