@@ -247,14 +247,14 @@ pt<-plot_grid(p1, p2, p3, p4,  labels = c('A', 'B', 'C', "D"), label_size = 12, 
 dir.create("report/plots", showWarnings = FALSE, recursive = TRUE)
 save_plot("report/plots/log2_cpm_nonfilt_nonnorm.svg",p1, base_width = 15, base_height = 7)
 save_plot("report/plots/log2_cpm_nonfilt_nonnorm.png",p1, base_width = 15, base_height = 7)
-save_plot("report/plots/log2_cpm_nonfilt_nonnorm.svg",p2, base_width = 15, base_height = 7)
-save_plot("report/plots/log2_cpm_nonfilt_nonnorm.png",p2, base_width = 15, base_height = 7)
-save_plot("report/plots/log2_cpm_nonfilt_nonnorm.svg",p3, base_width = 15, base_height = 7)
-save_plot("report/plots/log2_cpm_nonfilt_nonnorm.png",p3, base_width = 15, base_height = 7)
-save_plot("report/plots/log2_cpm_nonfilt_nonnorm.svg",p4, base_width = 15, base_height = 7)
-save_plot("report/plots/log2_cpm_nonfilt_nonnorm.png",p4, base_width = 15, base_height = 7)
-save_plot("report/plots/log2_cpm_nonfilt_nonnorm.svg",pt, base_width = 15, base_height = 7)
-save_plot("report/plots/log2_cpm_nonfilt_nonnorm.png",pt, base_width = 15, base_height = 7)
+save_plot("report/plots/log2_cpm_filt_nonnorm.svg",p2, base_width = 15, base_height = 7)
+save_plot("report/plots/log2_cpm_filt_nonnorm.png",p2, base_width = 15, base_height = 7)
+save_plot("report/plots/log2_cpm_filt_norm.svg",p3, base_width = 15, base_height = 7)
+save_plot("report/plots/log2_cpm_filt_norm.png",p3, base_width = 15, base_height = 7)
+save_plot("report/plots/log2_cpm_filt_norm_fastqc_ok.svg",p4, base_width = 15, base_height = 7)
+save_plot("report/plots/log2_cpm_filt_norm_fastqc_ok.png",p4, base_width = 15, base_height = 7)
+save_plot("report/plots/allqualityplots.svg",pt, base_width = 30, base_height = 10)
+save_plot("report/plots/allqualityplots.png",pt, base_width = 30, base_height = 10)
 ```
 
 Filtering was carried out to remove lowly expressed genes. Genes with less than 1 count per million (CPM) in at least `r nocpm_threshold` or more samples were filtered out. This is done to make sure that the low expression is due to a lack of significance across **all** conditions, and not an intrinsic propoerty of one of them. This filtering reduced the number of genes from `r nrow(myDGEList)` to `r nrow(myDGEList.filtered)`. Normalisation of samples was performed with [edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html), using *Trimmed Mean of M-value* or *TMM*. This method is based on the assumption that most genes are not differentially expressed. It **calculates a scaling factor for each sample**, which is the median of the ratio of each gene's expression to the geometric mean of all samples. This scaling factor is then used to normalise the expression of each gene in each sample. The normalised expression is then expressed as log2(CPM). The normalisation step is important because it **allows for the comparison of expression between samples**.
@@ -305,7 +305,11 @@ rep <- factor(rep)
 pca.res <- prcomp(t(log2.cpm.filtered.norm), scale.=F, retx=T)
 pc.var<-pca.res$sdev^2 # sdev^2 captures these eigenvalues from the PCA result
 pc.per<-round(pc.var/sum(pc.var)*100, 1) 
-pca.res.df <- as_tibble(pca.res$x)
+pca.res.df <- pca.res$x[,1:4] %>% 
+  as_tibble() %>%
+  add_column(sample = sampleLabels,
+             group = media)
+
 pca.plot_media <- ggplot(pca.res.df) +
   aes(x=PC1, y=PC2, label=sampleLabels, color = media) +
   geom_point(size=4) +
@@ -327,9 +331,32 @@ pca.plot_replicate <- ggplot(pca.res.df) +
        caption=paste0("produced on ", Sys.time())) +
   coord_fixed() +
   theme_bw()
-ggplotly(pca.plot_media)
+# For html ggplotly(pca.plot_media)
 
+  
+pca.pivot <- pivot_longer(pca.res.df, 
+                          cols = PC1:PC4, 
+                          names_to = "PC", 
+                          values_to = "loadings") 
 
+small_multiples_plot<-ggplot(pca.pivot) +
+  aes(x=sample, y=loadings, fill=sample) + 
+  geom_bar(stat="identity") +
+  facet_wrap(~PC) +
+  labs(title="PCA 'small multiples' plot",
+       caption=paste0("produced on ", Sys.time())) +
+  theme_bw() +
+  theme(legend.position = "none") +
+  coord_flip()
+
+all_pca<-plot_grid(pca.plot_media,small_multiples_plot,labels = c('A', 'B'), label_size = 12, align="hv")
+save_plot("report/plots/pca.svg",pca.plot_media, base_width = 15, base_height = 7)
+save_plot("report/plots/pca.png",pca.plot_media, base_width = 15, base_height = 7)
+save_plot("report/plots/pca_sm.svg",small_multiples_plot, base_width = 15, base_height = 7)
+save_plot("report/plots/pca_sm.png",small_multiples_plot, base_width = 15, base_height = 7)
+save_plot("report/plots/all_pca.svg",all_pca, base_width = 15, base_height = 7)
+save_plot("report/plots/all_pca.png",all_pca, base_width = 15, base_height = 7)
+all_pca
 ```
 
 ------------------------------------------------------------------------
