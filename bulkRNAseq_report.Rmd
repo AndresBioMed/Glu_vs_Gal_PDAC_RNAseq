@@ -39,39 +39,11 @@ knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
 
 ### Software
 
-Raw reads from [ENA](https://www.ebi.ac.uk/ena/browser/view/PRJEB10204) -- Project: *PRJEB10204* --  were mapped to the human reference transcriptome *GRCh38.cdna* using [Kallisto](https://pachterlab.github.io/kallisto/) The quality of raw reads and mapping, as well as the version used are summarized in [this summary report](http://DIYtranscriptomics.github.io/Data/files/multiqc_report.html) generated using [fastqc](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) and [multiqc](https://multiqc.info/).
+Raw reads from [ENA](https://www.ebi.ac.uk/ena/browser/view/PRJEB10204) -- Project: *PRJEB10204* --  were mapped to the human reference transcriptome *GRCh38.cdna* using [Kallisto](https://pachterlab.github.io/kallisto/) The quality of the read were analysed using [fastqc](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) and [multiqc](https://multiqc.info/).
 
 ### Aligning raw reads with Kallisto
 
 In this project there are a total of 6 single-end samples consisting of 3 replicates of 2 conditions; **with adherent media** or **with sphere media**. For each sample *fastqc* was run to determine the quality of the sequencing. Kallisto was then used to pseudo-align the samples to the most updated reference human genome. Although I provide a suitable code for performing the aligning, a fully tailored automatic script [Automatic Kallisto Gene aligner](https://github.com/AndresBioMed/Glu_vs_Gal_PDAC_RNAseq/blob/main/AutomatedKallistoGeneAlignment.sh) was written *ad hoc* in order to facilitate multiple sample analysis. It only needs the *.fastqc.gz* files, and a cDNA [reference genome](https://www.ensembl.org/info/data/ftp/index.html).
-
-```{bash fastqc}
-fastqc *.gz -t 8 #the last argument allows for quad core processing
-```
-
-
-```{bash Reference Genome}
-wget https://ftp.ensembl.org/pub/release-110/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz #Always check the website for newer releases
-
-gunzip Homo_sapiens.GRCh38.cdna.all.fa.gz
-
-kallisto index -i Homo_sapiens.GRCh38.cdna.all.index Homo_sapiens.GRCh38.cdna.all.fa
-```
-```{bash Kallisto Aligning}
-#For Single-end data
-kallisto quant\  #name of the function
--i Homo_sapiens.GRCh38.cdna.all.index\   #Name of the index
--o results\  #Path of the output folder
--t 8\  #Number of threads (8 for quadcore)
---single -l 250 -s 30\ 
-SRR8668755_1M_subsample.fastq.gz\  #Name of the files
-> SRR8668755_1M_subsample.log 2>&1 #This creates the log for multiqc
-#Single means this is single-end data. -l is the average length of our sequence. -s is the average standard deviation of those fragment lengths. 250 and 30 will work fine for most illumina sequences, otherwise, you can check this values in the machine.
-
-#It should detect all fastqc and kallisto logs
-multiqc -d . #This will search all files in all folders from your current directory
-
-```
 
 
 ------------------------------------------------------------------------
@@ -80,7 +52,7 @@ multiqc -d . #This will search all files in all folders from your current direct
 
 After read mapping with Kallisto, [TxImport](https://bioconductor.org/packages/release/bioc/html/tximport.html) was used to read kallisto outputs into the R environment. Annotation data from Biomart was used to summarize data from transcript-level to gene-level.
 
-```{r studydesign}
+```{r studydesign, echo=FALSE}
 design<-data.frame(sample=c("ERR978118","ERR978120","ERR978121","ERR978193","ERR978107","ERR978112","ERR978114","ERR978184","ERR978185","ERR978186","ERR978187","ERR978191","ERR978194","ERR978116","ERR978117","ERR978119","ERR978122","ERR978189","ERR978195","ERR978196"),
                    media=c("adh","adh","adh","sph","adh","adh","adh","sph","sph","sph","sph","sph","sph","adh","adh","adh","adh","sph","sph","sph"),
                    replicate=c("b","b","b","b","a","a","a","a","a","a","a","b","b","b","b","b","b","a","b","b"))
@@ -88,13 +60,13 @@ design<-data.frame(sample=c("ERR978118","ERR978120","ERR978121","ERR978193","ERR
 write.table(design, file = "studydesign.txt", sep = "\t", row.names = FALSE)
 ```
 
-```{r step 1 - TxImport}
-library(tidyverse) # provides access to Hadley Wickham's collection of R packages for data science, which we will use throughout the course
-library(tximport) # package for getting Kallisto results into R
-library(ensembldb) #helps deal with ensembl
-library(EnsDb.Hsapiens.v86) #replace with your organism-specific database package
+```{r step 1 - TxImport, echo=FALSE}
+library(tidyverse) 
+library(tximport)
+library(ensembldb) 
+library(EnsDb.Hsapiens.v86)
 targets <- read_tsv("studydesign.txt")
-samples_nodepth<-targets$sample %in% c("ERR978114","ERR978122","ERR978189","ERR978196")
+samples_nodepth<-targets$sample %in% c("ERR978114","ERR978122","ERR978189","ERR978196") # remove samples without enough read depth, according to fastqc.
 
 targets<-targets[!samples_nodepth,]
 path <- file.path(targets$sample, "abundance.tsv") # set file paths to your mapped data
@@ -105,7 +77,7 @@ Tx <- dplyr::select(Tx, "target_id", "gene_name")
 Txi_gene <- tximport(paste0("kallisto/",path), 
                      type = "kallisto", 
                      tx2gene = Tx, 
-                     txOut = FALSE, #determines whether your data represented at transcript or gene level
+                     txOut = FALSE, #Transcripts will be collapsed to genes
                      countsFromAbundance = "lengthScaledTPM",
                      ignoreTxVersion = TRUE)
 ```
@@ -114,10 +86,9 @@ Txi_gene <- tximport(paste0("kallisto/",path),
 
 ## Preprocessing
 
-### Impact of filtering and normalization
+### Filtering & normalisation
 
 ```{r step2 - dataWrangling}
-library(tidyverse)
 library(edgeR)
 library(matrixStats)
 library(cowplot)
@@ -128,11 +99,10 @@ log2.cpm <- cpm(myDGEList, log=TRUE)
 
 log2.cpm.df <- as_tibble(log2.cpm, rownames = "geneID")
 colnames(log2.cpm.df) <- c("geneID", sampleLabels)
-log2.cpm.df.pivot <- pivot_longer(log2.cpm.df, # dataframe to be pivoted
-                                  cols = ERR978118:ERR978195, # column names to be stored as a SINGLE variable
-                                  names_to = "samples", # name of that new variable (column)
-                                  values_to = "expression") # name of new variable (column) storing all the values (data)
-
+log2.cpm.df.pivot <- pivot_longer(log2.cpm.df, 
+                                  cols = ERR978118:ERR978195,         
+                                  names_to = "samples", 
+                                  values_to = "expression") 
 p1 <- ggplot(log2.cpm.df.pivot) +
   aes(x=samples, y=expression, fill=samples) +
   geom_violin(trim = FALSE, show.legend = FALSE) +
@@ -149,16 +119,16 @@ p1 <- ggplot(log2.cpm.df.pivot) +
   theme_bw()
 
 cpm <- cpm(myDGEList)
-keepers <- rowSums(cpm>1)>=9 #user defined
+keepers <- rowSums(cpm>1)>=9 #IMPORTANT PARAMETRE
 myDGEList.filtered <- myDGEList[keepers,]
 
 log2.cpm.filtered <- cpm(myDGEList.filtered, log=TRUE)
 log2.cpm.filtered.df <- as_tibble(log2.cpm.filtered, rownames = "geneID")
 colnames(log2.cpm.filtered.df) <- c("geneID", sampleLabels)
-log2.cpm.filtered.df.pivot <- pivot_longer(log2.cpm.filtered.df, # dataframe to be pivoted
-                                           cols = ERR978118:ERR978195, # column names to be stored as a SINGLE variable
-                                           names_to = "samples", # name of that new variable (column)
-                                           values_to = "expression") # name of new variable (column) storing all the values (data)
+log2.cpm.filtered.df.pivot <- pivot_longer(log2.cpm.filtered.df, 
+                                           cols = ERR978118:ERR978195, 
+                                           names_to = "samples", 
+                                           values_to = "expression") 
 
 p2 <- ggplot(log2.cpm.filtered.df.pivot) +
   aes(x=samples, y=expression, fill=samples) +
@@ -171,7 +141,7 @@ p2 <- ggplot(log2.cpm.filtered.df.pivot) +
                show.legend = FALSE) +
   labs(y="log2 expression", x = "sample",
        title="Log2 Counts per Million (CPM)",
-       subtitle="filtered, non-normalized",
+       subtitle="filtered, non-normalised",
        caption=paste0("produced on ", Sys.time())) +
   theme_bw()
 
@@ -179,10 +149,10 @@ myDGEList.filtered.norm <- calcNormFactors(myDGEList.filtered, method = "TMM")
 log2.cpm.filtered.norm <- cpm(myDGEList.filtered.norm, log=TRUE)
 log2.cpm.filtered.norm.df <- as_tibble(log2.cpm.filtered.norm, rownames = "geneID")
 colnames(log2.cpm.filtered.norm.df) <- c("geneID", sampleLabels)
-log2.cpm.filtered.norm.df.pivot <- pivot_longer(log2.cpm.filtered.norm.df, # dataframe to be pivoted
-                                                cols = ERR978118:ERR978195, # column names to be stored as a SINGLE variable
-                                                names_to = "samples", # name of that new variable (column)
-                                                values_to = "expression") # name of new variable (column) storing all the values (data)
+log2.cpm.filtered.norm.df.pivot <- pivot_longer(log2.cpm.filtered.norm.df, 
+                                                cols = ERR978118:ERR978195,
+                                                names_to = "samples", 
+                                                values_to = "expression") 
 
 p3 <- ggplot(log2.cpm.filtered.norm.df.pivot) +
   aes(x=samples, y=expression, fill=samples) +
@@ -195,11 +165,11 @@ p3 <- ggplot(log2.cpm.filtered.norm.df.pivot) +
                show.legend = FALSE) +
   labs(y="log2 expression", x = "sample",
        title="Log2 Counts per Million (CPM)",
-       subtitle="filtered, TMM normalized",
+       subtitle="filtered, TMM normalised",
        caption=paste0("produced on ", Sys.time())) +
   theme_bw()
 
-plot_grid(p1, p2, p3, labels = c('A', 'B', 'C'), label_size = 12)
+plot_grid(p1, p2, p3, labels = c('A', 'B', 'C'), label_size = 12, align="hv")
 ```
 
 Filtering was carried out to remove lowly expressed genes. Genes with less than 1 count per million (CPM) in at least 5 or more samples filtered out. This reduced the number of genes from `r nrow(myDGEList)` to `r nrow(myDGEList.filtered)`.
