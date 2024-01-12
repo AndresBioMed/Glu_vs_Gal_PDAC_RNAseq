@@ -52,14 +52,32 @@ mkdir -p ~/new_AKG/index
 # Prompt the user for the input folder
 read -p "Enter the absolute path (use realpath) to the input folder (containing *.gz files): " input_folder
 
-# Prompt the user for the output folder
-read -p "Enter the absolute path to the reference genome file (containing a *.fa file): " genome_file
-
 # Prompt the user for the threads to be used
 read -p "Enter the number of threads available in your machine: " threads
 
+# Check if the user already has an index file
+read -p "Do you already have an index file? (y/n): " has_index
+
+if [ "$has_index" = "y" ]; then
+    # Prompt the user for the index file path
+    read -p "Enter the absolute path to the index file: " index_file
+else
+    # Prompt the user for the output folder
+    read -p "Enter the absolute path to the reference genome file (containing a *.fa file): " genome_file
+
+    # Create the index for the reference genome
+    cd ~/new_AKG/index || exit
+    kallisto index -i Homo_sapiens.GRCh38.cdna.all.index "$genome_file"
+    echo "--> AKG has finished creating the index"
+
+    # Get the index realpath
+    index_file=$(realpath "$(find ~/new_AKG/index -type f -name "*.index" -print -quit)")
+
+fi
+
+echo "Using index file: $index_file"
+
 echo "Input folder:  $input_folder"
-echo "Genome file: $genome_file"
 
 # Analyze .gz files with FastQC
 echo "--> AKG will now analyze the quality of your samples with FastQC"
@@ -71,14 +89,7 @@ cd $input_folder || exit
 mv *fastqc* ~/new_AKG/fastqc
 echo "--> AKG has finished analyzing the quality of your samples with FastQC"
 echo "--> AKG will now create an index based on your reference genome"
-# create the index for the reference genome
-cd ~/new_AKG/index ||  exit
-kallisto index -i Homo_sapiens.GRCh38.cdna.all.index $genome_file
-echo "--> AKG has finished the index"
 
-#Get the index realpath
-index_file=$(realpath "$(find ~/new_AKG/index -type f -name "*.index" -print -quit)")
-echo "Using index file: $index_file"
 
 cd ~/new_AKG/kallisto || exit
 
@@ -98,7 +109,7 @@ for input_file in "$input_folder"/*.gz; do
 done
 
 echo "--> AKG has now Finished processing all your samples"
-echo "Summarising results via MultiQ"
+echo "Summarising results via MultiQC"
 
 cd ~/new_AKG || exit
 multiqc -d .
