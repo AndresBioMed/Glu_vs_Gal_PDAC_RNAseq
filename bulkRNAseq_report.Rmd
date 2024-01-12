@@ -25,6 +25,11 @@ library(knitr)
 knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
 ```
 
+```{r parametres}
+nocpm_threshold<-9 #IMPORTANT PARAMETRE: minimum number of samples with CPM > 1
+```
+
+
 ## Introduction
 
 
@@ -60,7 +65,7 @@ design<-data.frame(sample=c("ERR978118","ERR978120","ERR978121","ERR978193","ERR
 write.table(design, file = "studydesign.txt", sep = "\t", row.names = FALSE)
 ```
 
-```{r step 1 - TxImport, echo=FALSE}
+```{r step 1 all samples - TxImport, echo=FALSE}
 library(tidyverse) 
 library(tximport)
 library(ensembldb) 
@@ -68,7 +73,6 @@ library(EnsDb.Hsapiens.v86)
 targets <- read_tsv("studydesign.txt")
 samples_nodepth<-targets$sample %in% c("ERR978114","ERR978122","ERR978189","ERR978196") # remove samples without enough read depth, according to fastqc.
 
-targets<-targets[!samples_nodepth,]
 path <- file.path(targets$sample, "abundance.tsv") # set file paths to your mapped data
 Tx <- transcripts(EnsDb.Hsapiens.v86, columns=c("tx_id", "gene_name"))
 Tx <- as_tibble(Tx)
@@ -119,7 +123,7 @@ p1 <- ggplot(log2.cpm.df.pivot) +
   theme_bw()
 
 cpm <- cpm(myDGEList)
-keepers <- rowSums(cpm>1)>=9 #IMPORTANT PARAMETRE
+keepers <- rowSums(cpm>1)>=nocpm_threshold 
 myDGEList.filtered <- myDGEList[keepers,]
 
 log2.cpm.filtered <- cpm(myDGEList.filtered, log=TRUE)
@@ -169,17 +173,64 @@ p3 <- ggplot(log2.cpm.filtered.norm.df.pivot) +
        caption=paste0("produced on ", Sys.time())) +
   theme_bw()
 
-plot_grid(p1, p2, p3, labels = c('A', 'B', 'C'), label_size = 12, align="hv")
+#Create the directories for output results
+dir.create("report/data", showWarnings = FALSE, recursive = TRUE)
+write.csv(log2.cpm.filtered.norm.df, "report/data/log2_cpm_filtered_norm.csv", row.names = F)
+write.csv(log2.cpm.filtered.df, "report/data/log2_cpm_filtered.csv", row.names = F)
 ```
 
-Filtering was carried out to remove lowly expressed genes. Genes with less than 1 count per million (CPM) in at least 5 or more samples filtered out. This reduced the number of genes from `r nrow(myDGEList)` to `r nrow(myDGEList.filtered)`.
+```{r step 1 & 2 filtered out samples}
+targets<-targets[!samples_nodepth,]
+path <- file.path(targets$sample, "abundance.tsv") # set file paths to your mapped data
+Tx <- transcripts(EnsDb.Hsapiens.v86, columns=c("tx_id", "gene_name"))
+Tx <- as_tibble(Tx)
+Tx <- dplyr::rename(Tx, target_id = tx_id)
+Tx <- dplyr::select(Tx, "target_id", "gene_name")
+Txi_gene <- tximport(paste0("kallisto/",path), 
+                     type = "kallisto", 
+                     tx2gene = Tx, 
+                     txOut = FALSE, #Transcripts will be collapsed to genes
+                     countsFromAbundance = "lengthScaledTPM",
+                     ignoreTxVersion = TRUE)
+
+sampleLabels <- targets$sample
+myDGEList <- DGEList(Txi_gene$counts)
+log2.cpm <- cpm(myDGEList, log=TRUE)
+
+log2.cpm.df <- as_tibble(log2.cpm, rownames = "geneID")
+colnames(log2.cpm.df) <- c("geneID", sampleLabels)
+log2.cpm.df.pivot <- pivot_longer(log2.cpm.df, 
+                                  cols = ERR978118:ERR978195,         
+                                  names_to = "samples", 
+                                  values_to = "expression") 
+p4 <- ggplot(log2.cpm.filtered.norm.df.pivot) +
+  aes(x=samples, y=expression, fill=samples) +
+  geom_violin(trim = FALSE, show.legend = FALSE) +
+  stat_summary(fun = "median", 
+               geom = "point", 
+               shape = 95, 
+               size = 10, 
+               color = "black", 
+               show.legend = FALSE) +
+  labs(y="log2 expression", x = "sample",
+       title="Log2 Counts per Million (CPM)",
+       subtitle="filtered, TMM normalised, fastQC passed",
+       caption=paste0("produced on ", Sys.time())) +
+  theme_bw()
+plot_grid(p1, p2, p3, p4,  labels = c('A', 'B', 'C', "D"), label_size = 12, align="hv")
+
+```
+
+Filtering was carried out to remove lowly expressed genes. Genes with less than 1 count per million (CPM) in at least `r nocpm_threshold` or more samples were filtered out. This is done to make sure that the low expression is due to a lack of significance across **all** conditions, and not an intrinsic propoerty of one of them. This filtering reduced the number of genes from `r nrow(myDGEList)` to `r nrow(myDGEList.filtered)`. Normalisation of samples was performed with [edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html), using *Trimmed Mean of M-value* or *TMM*. This method is based on the assumption that most genes are not differentially expressed. It **calculates a scaling factor for each sample**, which is the median of the ratio of each gene's expression to the geometric mean of all samples. This scaling factor is then used to normalise the expression of each gene in each sample. The normalised expression is then expressed as log2(CPM). The normalisation step is important because it **allows for the comparison of expression between samples**.
+
+According to *fastqc* results, a total of `r sum(samples_nodepth)` samples were removed due to low quality. This is `r round(sum(samples_nodepth)/length(samples_nodepth)*100, 2)`% of the total reads. Filtered out samples are: `r targets$sample[samples_nodepth]`.
+
 
 ------------------------------------------------------------------------
 
 ### table of filtered and normalized data
 
 ```{r step 3 - multivariate part 1 (data table)}
-library(tidyverse)
 library(DT)
 library(gt)
 library(plotly)
