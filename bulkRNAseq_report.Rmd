@@ -1,8 +1,11 @@
 ---
-title: "<center> Transcriptomic effect of Glucose vs Galactose in PDAC <center>"
-author: "<center> Andrés Gordo Ortiz<center><br>"
-date: "<center> _`r Sys.Date()`_ <center>"
+title: "Report:Transcriptomic effect of Glucose vs Galactose in PDAC"
+author: "Andrés Gordo Ortiz"
+date: "`r Sys.Date()`"
 output:
+  pdf_document:
+    fig_caption: yes
+    toc: yes
   html_document:
     code_folding: show
     df_print: paged
@@ -13,16 +16,13 @@ output:
       collapsed: false
       smooth_scroll: false
     number_sections: true
-  pdf_document:
-    fig_caption: yes
-    toc: yes
 ---
 
 ```{r setup, include=FALSE}
 library(rmarkdown)
 library(tinytex)
 library(knitr)
-knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
 ```
 
 ```{r parametres}
@@ -35,11 +35,6 @@ nocpm_threshold<-9 #IMPORTANT PARAMETRE: minimum number of samples with CPM > 1
 
 ------------------------------------------------------------------------
 
-## R packages used
-
-
-------------------------------------------------------------------------
-
 ## Read mapping
 
 ### Software
@@ -48,12 +43,8 @@ Raw reads from [ENA](https://www.ebi.ac.uk/ena/browser/view/PRJEB10204) -- Proje
 
 ### Aligning raw reads with Kallisto
 
-In this project there are a total of 6 single-end samples consisting of 3 replicates of 2 conditions; **with adherent media** or **with sphere media**. For each sample *fastqc* was run to determine the quality of the sequencing. Kallisto was then used to pseudo-align the samples to the most updated reference human genome. Although I provide a suitable code for performing the aligning, a fully tailored automatic script [Automatic Kallisto Gene aligner](https://github.com/AndresBioMed/Glu_vs_Gal_PDAC_RNAseq/blob/main/AutomatedKallistoGeneAlignment.sh) was written *ad hoc* in order to facilitate multiple sample analysis. It only needs the *.fastqc.gz* files, and a cDNA [reference genome](https://www.ensembl.org/info/data/ftp/index.html).
+In this project there are a total of 20 single-end samples consisting of 10 replicates of 2 conditions; **with adherent media** or **with sphere media**. For each sample *fastqc* was run to determine the quality of the sequencing. Kallisto was then used to pseudo-align the samples to the most updated reference human genome. Although I provide a suitable code for performing the aligning, a fully tailored automatic script [Automatic Kallisto Gene aligner](https://github.com/AndresBioMed/Glu_vs_Gal_PDAC_RNAseq/blob/main/AutomatedKallistoGeneAlignment.sh) was written *ad hoc* in order to facilitate multiple sample analysis. It only needs the *.fastqc.gz* files, and a cDNA [reference genome](https://www.ensembl.org/info/data/ftp/index.html).
 
-
-------------------------------------------------------------------------
-
-### Importing count data into R
 
 After read mapping with Kallisto, [TxImport](https://bioconductor.org/packages/release/bioc/html/tximport.html) was used to read kallisto outputs into the R environment. Annotation data from Biomart was used to summarize data from transcript-level to gene-level.
 
@@ -514,13 +505,13 @@ library(clusterProfiler) # provides a suite of tools for functional enrichment a
 library(msigdbr) # access to msigdb collections directly within R
 library(enrichplot) # great for making the standard GSEA enrichment plots
 gost.res_up <- gost(rownames(myModule_up), organism = "hsapiens", correction_method = "fdr")
-gostplot(gost.res_up, interactive = T, capped = F) #set interactive=FALSE to get plot for publications
+gostplot(gost.res_up, interactive = F, capped = F) #set interactive=FALSE to get plot for publications
 
 ```
 
 ```{r step 7 - functionalEnrichment part 2 (gostplot for downregulated genes)}
 gost.res_down <- gost(rownames(myModule_down), organism = "hsapiens", correction_method = "fdr")
-gostplot(gost.res_down, interactive = T, capped = T) #set interactive=FALSE to get plot for publications
+gostplot(gost.res_down, interactive = F, capped = T) #set interactive=FALSE to get plot for publications
 ```
 
 ## GSEA
@@ -541,7 +532,9 @@ mydata.gsea <- sort(mydata.gsea, decreasing = TRUE)
 # run GSEA using the 'GSEA' function from clusterProfiler
 myGSEA.res <- GSEA(mydata.gsea, TERM2GENE=hs_gsea_c2, verbose=FALSE)
 myGSEA.df <- as_tibble(myGSEA.res@result)
+```
 
+```{r table 3 only html, eval=FALSE}
 # view results as an interactive table
 datatable(myGSEA.df, 
           extensions = c('KeyTable', "FixedHeader"), 
