@@ -96,6 +96,7 @@ Txi_gene <- tximport(paste0("kallisto/",path),
 library(edgeR)
 library(matrixStats)
 library(cowplot)
+library(svglite)
 
 sampleLabels <- targets$sample
 myDGEList <- DGEList(Txi_gene$counts)
@@ -116,7 +117,7 @@ p1 <- ggplot(log2.cpm.df.pivot) +
                size = 10, 
                color = "black", 
                show.legend = FALSE) +
-  labs(y="log2 expression", x = "sample",
+  labs(y="log2 expression", x = "Sample",
        title="Log2 Counts per Million (CPM)",
        subtitle="unfiltered, non-normalized",
        caption=paste0("produced on ", Sys.time())) +
@@ -143,7 +144,7 @@ p2 <- ggplot(log2.cpm.filtered.df.pivot) +
                size = 10, 
                color = "black", 
                show.legend = FALSE) +
-  labs(y="log2 expression", x = "sample",
+  labs(y="log2 expression", x = "Sample",
        title="Log2 Counts per Million (CPM)",
        subtitle="filtered, non-normalised",
        caption=paste0("produced on ", Sys.time())) +
@@ -167,7 +168,7 @@ p3 <- ggplot(log2.cpm.filtered.norm.df.pivot) +
                size = 10, 
                color = "black", 
                show.legend = FALSE) +
-  labs(y="log2 expression", x = "sample",
+  labs(y="log2 expression", x = "Sample",
        title="Log2 Counts per Million (CPM)",
        subtitle="filtered, TMM normalised",
        caption=paste0("produced on ", Sys.time())) +
@@ -203,6 +204,29 @@ log2.cpm.df.pivot <- pivot_longer(log2.cpm.df,
                                   cols = ERR978118:ERR978195,         
                                   names_to = "samples", 
                                   values_to = "expression") 
+
+cpm <- cpm(myDGEList)
+keepers <- rowSums(cpm>1)>=nocpm_threshold 
+myDGEList.filtered <- myDGEList[keepers,]
+
+log2.cpm.filtered <- cpm(myDGEList.filtered, log=TRUE)
+log2.cpm.filtered.df <- as_tibble(log2.cpm.filtered, rownames = "geneID")
+colnames(log2.cpm.filtered.df) <- c("geneID", sampleLabels)
+log2.cpm.filtered.df.pivot <- pivot_longer(log2.cpm.filtered.df, 
+                                           cols = ERR978118:ERR978195, 
+                                           names_to = "samples", 
+                                           values_to = "expression") 
+
+
+myDGEList.filtered.norm <- calcNormFactors(myDGEList.filtered, method = "TMM")
+log2.cpm.filtered.norm <- cpm(myDGEList.filtered.norm, log=TRUE)
+log2.cpm.filtered.norm.df <- as_tibble(log2.cpm.filtered.norm, rownames = "geneID")
+colnames(log2.cpm.filtered.norm.df) <- c("geneID", sampleLabels)
+log2.cpm.filtered.norm.df.pivot <- pivot_longer(log2.cpm.filtered.norm.df, 
+                                                cols = ERR978118:ERR978195,
+                                                names_to = "samples", 
+                                                values_to = "expression") 
+
 p4 <- ggplot(log2.cpm.filtered.norm.df.pivot) +
   aes(x=samples, y=expression, fill=samples) +
   geom_violin(trim = FALSE, show.legend = FALSE) +
@@ -212,13 +236,25 @@ p4 <- ggplot(log2.cpm.filtered.norm.df.pivot) +
                size = 10, 
                color = "black", 
                show.legend = FALSE) +
-  labs(y="log2 expression", x = "sample",
+  labs(y="log2 expression", x = "Sample",
        title="Log2 Counts per Million (CPM)",
        subtitle="filtered, TMM normalised, fastQC passed",
        caption=paste0("produced on ", Sys.time())) +
   theme_bw()
-plot_grid(p1, p2, p3, p4,  labels = c('A', 'B', 'C', "D"), label_size = 12, align="hv")
+pt<-plot_grid(p1, p2, p3, p4,  labels = c('A', 'B', 'C', "D"), label_size = 12, align="hv")
 
+#Create folder for plots
+dir.create("report/plots", showWarnings = FALSE, recursive = TRUE)
+save_plot("report/plots/log2_cpm_nonfilt_nonnorm.svg",p1, base_width = 15, base_height = 7)
+save_plot("report/plots/log2_cpm_nonfilt_nonnorm.png",p1, base_width = 15, base_height = 7)
+save_plot("report/plots/log2_cpm_nonfilt_nonnorm.svg",p2, base_width = 15, base_height = 7)
+save_plot("report/plots/log2_cpm_nonfilt_nonnorm.png",p2, base_width = 15, base_height = 7)
+save_plot("report/plots/log2_cpm_nonfilt_nonnorm.svg",p3, base_width = 15, base_height = 7)
+save_plot("report/plots/log2_cpm_nonfilt_nonnorm.png",p3, base_width = 15, base_height = 7)
+save_plot("report/plots/log2_cpm_nonfilt_nonnorm.svg",p4, base_width = 15, base_height = 7)
+save_plot("report/plots/log2_cpm_nonfilt_nonnorm.png",p4, base_width = 15, base_height = 7)
+save_plot("report/plots/log2_cpm_nonfilt_nonnorm.svg",pt, base_width = 15, base_height = 7)
+save_plot("report/plots/log2_cpm_nonfilt_nonnorm.png",pt, base_width = 15, base_height = 7)
 ```
 
 Filtering was carried out to remove lowly expressed genes. Genes with less than 1 count per million (CPM) in at least `r nocpm_threshold` or more samples were filtered out. This is done to make sure that the low expression is due to a lack of significance across **all** conditions, and not an intrinsic propoerty of one of them. This filtering reduced the number of genes from `r nrow(myDGEList)` to `r nrow(myDGEList.filtered)`. Normalisation of samples was performed with [edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html), using *Trimmed Mean of M-value* or *TMM*. This method is based on the assumption that most genes are not differentially expressed. It **calculates a scaling factor for each sample**, which is the median of the ratio of each gene's expression to the geometric mean of all samples. This scaling factor is then used to normalise the expression of each gene in each sample. The normalised expression is then expressed as log2(CPM). The normalisation step is important because it **allows for the comparison of expression between samples**.
