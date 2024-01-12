@@ -12,9 +12,20 @@ if ! command -v mamba &> /dev/null; then
     exit 1
 fi
 
-# Check if kallisto=0.48 is installed
-if ! mamba list | grep -q "kallisto=0.48"; then
-    echo "kallisto=0.48 is not installed. Installing kallisto=0.48..."
+# Check if kallisto is installed
+if mamba list | grep -q "kallisto"; then
+    # Extract the installed version
+    installed_version=$(mamba list | awk '/kallisto/ {print $2}')
+    
+    # Check if the installed version is 0.48
+    if [ "$installed_version" != "0.48" ]; then
+        echo "kallisto is installed, but not version 0.48. Installing kallisto=0.48..."
+        mamba install -c bioconda "kallisto=0.48"
+    else
+        echo "kallisto=0.48 is already installed."
+    fi
+else
+    echo "kallisto is not installed. Installing kallisto=0.48..."
     mamba install -c bioconda "kallisto=0.48"
 fi
 
