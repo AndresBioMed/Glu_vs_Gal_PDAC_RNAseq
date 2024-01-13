@@ -22,6 +22,20 @@ output:
 library(rmarkdown)
 library(tinytex)
 library(knitr)
+library(beepr)
+library(tidyverse) 
+library(tximport)
+library(ensembldb) 
+library(EnsDb.Hsapiens.v86)
+library(edgeR)
+library(matrixStats)
+library(cowplot)
+library(svglite)
+library(DT)
+library(gt)
+library(plotly)
+library(limma)
+ 
 knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
 ```
 
@@ -30,23 +44,43 @@ nocpm_threshold<-9 #IMPORTANT PARAMETRE: minimum number of samples with CPM > 1
 ```
 
 
-## Introduction
 
+## Protocol
 
-------------------------------------------------------------------------
+#### 1. Data Acquisition
 
-## Read mapping
+- Raw sequencing reads for the project (PRJEB10204) were obtained from the [ENA](https://www.ebi.ac.uk/ena/browser/view/PRJEB10204).
 
-### Software
+#### 2. Read Mapping
 
-Raw reads from [ENA](https://www.ebi.ac.uk/ena/browser/view/PRJEB10204) -- Project: *PRJEB10204* --  were mapped to the human reference transcriptome *GRCh38.cdna* using [Kallisto](https://pachterlab.github.io/kallisto/) The quality of the read were analysed using [fastqc](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) and [multiqc](https://multiqc.info/).
+- The obtained raw reads were mapped to the human reference transcriptome [GRCh38.cdna](https://ftp.ensembl.org/pub/release-111/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz) using [Kallisto](https://pachterlab.github.io/kallisto/) version 0.48.
+  - Parameters used for Kallisto:
+    - Average length of reads: 250
+    - Standard deviation: 30
 
-### Aligning raw reads with Kallisto
+#### 3. Quality Analysis
 
-In this project there are a total of 20 single-end samples consisting of 10 replicates of 2 conditions; **with adherent media** or **with sphere media**. For each sample *fastqc* was run to determine the quality of the sequencing. Kallisto was then used to pseudo-align the samples to the most updated reference human genome. Although I provide a suitable code for performing the aligning, a fully tailored automatic script [Automatic Kallisto Gene aligner](https://github.com/AndresBioMed/Glu_vs_Gal_PDAC_RNAseq/blob/main/AutomatedKallistoGeneAlignment.sh) was written *ad hoc* in order to facilitate multiple sample analysis. It only needs the *.fastqc.gz* files, and a cDNA [reference genome](https://www.ensembl.org/info/data/ftp/index.html).
+- The quality of the mapped reads was assessed using [fastqc](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) and [multiqc](https://multiqc.info/).
 
+#### 4. Experimental Design
 
-After read mapping with Kallisto, [TxImport](https://bioconductor.org/packages/release/bioc/html/tximport.html) was used to read kallisto outputs into the R environment. Annotation data from Biomart was used to summarize data from transcript-level to gene-level.
+- The project includes a total of 20 single-end samples, comprising 10 replicates for each of the two experimental conditions: **with adherent media** and **with sphere media**.
+
+#### 5. Pre-processing
+
+- For each sample, *fastqc* was executed to evaluate the sequencing quality before further analysis.
+
+#### 6. Pseudo-alignment and Automated Script
+
+- Pseudo-alignment of the samples to the human reference genome was performed using Kallisto. While a suitable code is provided for the alignment process, a custom, fully automated script [Automatic Kallisto Gene aligner](https://github.com/AndresBioMed/Glu_vs_Gal_PDAC_RNAseq/blob/main/AutomatedKallistoGeneAlignment.sh) was developed *ad hoc* for streamlined analysis. The script requires the input of *.fastqc.gz* files and a cDNA [reference genome](https://www.ensembl.org/info/data/ftp/index.html).
+
+#### 7. Data Integration
+
+- Following read mapping with Kallisto, the [TxImport](https://bioconductor.org/packages/release/bioc/html/tximport.html) package was utilized to import Kallisto outputs into the R environment.
+
+#### 8. Data Summarization
+
+- Annotation data from Biomart was employed to summarize the data from transcript-level to gene-level, providing a comprehensive view of the gene expression landscape.
 
 ```{r studydesign, echo=FALSE}
 design<-data.frame(sample=c("ERR978118","ERR978120","ERR978121","ERR978193","ERR978107","ERR978112","ERR978114","ERR978184","ERR978185","ERR978186","ERR978187","ERR978191","ERR978194","ERR978116","ERR978117","ERR978119","ERR978122","ERR978189","ERR978195","ERR978196"),
@@ -57,10 +91,6 @@ write.table(design, file = "studydesign.txt", sep = "\t", row.names = FALSE)
 ```
 
 ```{r step 1 all samples - TxImport, echo=FALSE}
-library(tidyverse) 
-library(tximport)
-library(ensembldb) 
-library(EnsDb.Hsapiens.v86)
 targets <- read_tsv("studydesign.txt")
 samples_nodepth<-targets$sample %in% c("ERR978114","ERR978122","ERR978189","ERR978196") # remove samples without enough read depth, according to fastqc.
 
@@ -84,11 +114,6 @@ Txi_gene <- tximport(paste0("kallisto/",path),
 ### Filtering & normalisation
 
 ```{r step2 - dataWrangling}
-library(edgeR)
-library(matrixStats)
-library(cowplot)
-library(svglite)
-
 sampleLabels <- targets$sample
 myDGEList <- DGEList(Txi_gene$counts)
 log2.cpm <- cpm(myDGEList, log=TRUE)
@@ -246,6 +271,8 @@ save_plot("report/plots/log2_cpm_filt_norm_fastqc_ok.svg",p4, base_width = 15, b
 save_plot("report/plots/log2_cpm_filt_norm_fastqc_ok.png",p4, base_width = 15, base_height = 7)
 save_plot("report/plots/allqualityplots.svg",pt, base_width = 30, base_height = 10)
 save_plot("report/plots/allqualityplots.png",pt, base_width = 30, base_height = 10)
+
+pt
 ```
 
 Filtering was carried out to remove lowly expressed genes. Genes with less than 1 count per million (CPM) in at least `r nocpm_threshold` or more samples were filtered out. This is done to make sure that the low expression is due to a lack of significance across **all** conditions, and not an intrinsic propoerty of one of them. This filtering reduced the number of genes from `r nrow(myDGEList)` to `r nrow(myDGEList.filtered)`. Normalisation of samples was performed with [edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html), using *Trimmed Mean of M-value* or *TMM*. This method is based on the assumption that most genes are not differentially expressed. It **calculates a scaling factor for each sample**, which is the median of the ratio of each gene's expression to the geometric mean of all samples. This scaling factor is then used to normalise the expression of each gene in each sample. The normalised expression is then expressed as log2(CPM). The normalisation step is important because it **allows for the comparison of expression between samples**.
@@ -255,13 +282,9 @@ According to *fastqc* results, a total of `r sum(samples_nodepth)` samples were 
 
 ------------------------------------------------------------------------
 
-### table of filtered and normalised data
+### Filtered and Normalised data
 
 ```{r step 3 - multivariate part 1 (data table)}
-library(DT)
-library(gt)
-library(plotly)
-
 mydata.df <- mutate(log2.cpm.filtered.norm.df,
                     adh.AVG = (ERR978118+ERR978120+ERR978121+ERR978107+ERR978112+ERR978116+ERR978117+ERR978119
 )/8, 
@@ -271,7 +294,8 @@ mydata.df <- mutate(log2.cpm.filtered.norm.df,
                     LogFC = (sph.AVG - adh.AVG)) %>% 
   mutate_if(is.numeric, round, 2)
 dir.create("report/tables", showWarnings = FALSE, recursive = TRUE)
-write.csv(mydata.df, "report/tables/table_1.csv", row.names = FALSE)
+
+write.csv(mydata.df, "report/tables/table_1_filtered_normalised.csv", row.names = FALSE)
 
 scatter <- ggplot(mydata.df) + 
   aes(x=adh.AVG, y=sph.AVG, color=abs(LogFC)) +
@@ -282,9 +306,6 @@ save_plot("report/plots/scatter.svg",scatter, base_width = 10, base_height = 10)
 save_plot("report/plots/scatter.png",scatter, base_width = 10, base_height = 10)
 # only in html ggplotly(scatter)
 scatter
-```
-
-```{r step 3 - multivariate part 1 (data table), eval=FALSE}
 ```
 
 ```{r datable -only in html, eval=FALSE}
@@ -299,7 +320,7 @@ datatable(mydata.df[,c(1,(ncol(mydata.df)-2):ncol(mydata.df))],
 
 ```
 
-The table shown below includes expression data for `r nrow(myDGEList.filtered)` genes. You can sort and search the data directly from the table.
+The **Table 1** includes expression data for `r nrow(myDGEList.filtered)` genes. You can sort and search the data directly from the table in the *html* file.
 
 ------------------------------------------------------------------------
 
@@ -374,10 +395,6 @@ all_pca
 ## Volcano plot
 
 ```{r step 5 - diffGenes part 1 (volcano plot)}
-library(limma)
-library(gt)
-library(plotly) 
-
 design <- model.matrix(~0 + media)
 colnames(design) <- levels(media)
 
@@ -392,6 +409,7 @@ myTopHits <- topTable(ebFit, adjust ="BH", coef=1, number=40000, sort.by="logFC"
 
 myTopHits.df <- myTopHits %>%
   as_tibble(rownames = "geneID")
+write.csv(myTopHits.df, "report/tables/statistics_results.csv", row.names = FALSE)
 
 vplot <- ggplot(myTopHits.df) +
   aes(y=-log10(adj.P.Val), x=logFC, text = paste("Symbol:", geneID)) +
@@ -406,6 +424,8 @@ vplot <- ggplot(myTopHits.df) +
        caption=paste0("produced on ", Sys.time())) +
   theme_bw()
 
+save_plot("report/plots/volcano.svg",vplot, base_width = 15, base_height = 7)
+save_plot("report/plots/volcano.png",vplot, base_width = 15, base_height = 7)
 # Only in html ggplotly(vplot)
 vplot
 
@@ -416,7 +436,7 @@ vplot
 
 ## Table of DEGs
 
-To identify differentially expressed genes, precision weights were first applied to each gene based on its mean-variance relationship using [VOOM](https://genomebiology.biomedcentral.com/articles/10.1186/gb-2014-15-2-r29), then data was normalized using the [TMM method](https://genomebiology.biomedcentral.com/articles/10.1186/gb-2010-11-3-r25) in [EdgeR](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2796818/). Linear modeling and bayesian stats were employed via [Limma](https://academic.oup.com/nar/article/43/7/e47/2414268) to find genes that were up- or down-regulated in leishmania patients by 4-fold or more, with a false-discovery rate (FDR) of 0.01.
+To identify differentially expressed genes, precision weights were first applied to each gene based on its mean-variance relationship using [VOOM](https://genomebiology.biomedcentral.com/articles/10.1186/gb-2014-15-2-r29), then data was normalized using the [TMM method](https://genomebiology.biomedcentral.com/articles/10.1186/gb-2010-11-3-r25) in [EdgeR](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2796818/). Linear modeling and bayesian stats were employed via [Limma](https://academic.oup.com/nar/article/43/7/e47/2414268) to find genes that were up- or down-regulated by **2-fold or more, with a false-discovery rate (FDR) of 0.01**.
 
 ```{r step 5 - diffGenes part 2 (DEG table)}
 results <- decideTests(ebFit, method="global", adjust.method="BH", p.value=0.01, lfc=2)
@@ -424,7 +444,7 @@ colnames(v.DEGList.filtered.norm$E) <- sampleLabels
 diffGenes <- v.DEGList.filtered.norm$E[results[,1] !=0,]
 diffGenes.df <- as_tibble(diffGenes, rownames = "geneID")
 
-write.csv(diffGenes.df, "report/tables/table_2.csv", row.names = FALSE)
+write.csv(diffGenes.df, "report/tables/table_2_diffGenes.csv", row.names = FALSE)
 ```
 
 ```{r table 2 only html, eval=FALSE}
@@ -437,6 +457,103 @@ datatable(diffGenes.df,
 
 ------------------------------------------------------------------------
 
+## Isoform Switch Analyzer
+
+```{r Isoform Switch Analyzer}
+library(IsoformSwitchAnalyzeR)
+
+targets.mod <- targets %>%
+  dplyr::rename(sampleID = sample, condition = media) %>%
+  dplyr::select(sampleID, condition)
+
+Txi_trans <- importIsoformExpression(sampleVector = paste0("kallisto/",path))
+colnames(Txi_trans$abundance) <- c("isoform_id", sampleLabels)
+colnames(Txi_trans$counts) <- c("isoform_id", sampleLabels)
+
+# Define file paths
+gtf_file_path <- "Homo_sapiens.GRCh38.111.chr_patch_hapl_scaff.gtf.gz"
+fa_file_path <- "Homo_sapiens.GRCh38.cdna.all.fa.gz"
+
+# Check if files exist
+if (!file.exists(gtf_file_path)) {
+  download.file("https://ftp.ensembl.org/pub/release-111/gtf/homo_sapiens/Homo_sapiens.GRCh38.111.chr_patch_hapl_scaff.gtf.gz", gtf_file_path)
+}
+
+if (!file.exists(fa_file_path)) {
+  download.file("https://ftp.ensembl.org/pub/release-111/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz", fa_file_path)
+}
+
+
+mySwitchList <- importRdata(
+  isoformCountMatrix   = Txi_trans$counts,
+  isoformRepExpression = Txi_trans$abundance,
+  designMatrix         = targets.mod,
+  removeNonConvensionalChr = TRUE,
+  addAnnotatedORFs=TRUE,
+  fixStringTieAnnotationProblem = TRUE,
+  ignoreAfterPeriod=TRUE,
+  # the files below must be from the same ensembl release, and must match the reference release version that were originally mapped to the reads.
+  isoformExonAnnoation = "Homo_sapiens.GRCh38.110.chr_patch_hapl_scaff.gtf.gz",
+  isoformNtFasta       = "Homo_sapiens.GRCh38.cdna.all.fa.gz",
+  showProgress = TRUE)
+
+dir.create("report/isoformSwitch")
+
+mySwitchList <- isoformSwitchAnalysisCombined(
+  switchAnalyzeRlist   = mySwitchList,
+  pathToOutput = 'report/isoformSwitch')
+
+extractSwitchSummary(mySwitchList)
+
+extractTopSwitches(
+  mySwitchList,
+  filterForConsequences = TRUE, 
+  sortByQvals = TRUE)
+
+switchPlot(
+  mySwitchList,
+  gene='PURA',
+  condition1 = 'adh',
+  condition2 = 'sph',
+  localTheme = theme_bw())
+```
+
+```{r IsoformSwitch w/ structure analysis, eval=FALSE}
+mySwitchList2 <- importRdata(
+  isoformCountMatrix   = Txi_trans$counts,
+  isoformRepExpression = Txi_trans$abundance,
+  designMatrix         = targets.mod,
+  removeNonConvensionalChr = TRUE,
+  addAnnotatedORFs=TRUE,
+  fixStringTieAnnotationProblem = TRUE,
+  ignoreAfterPeriod=TRUE,
+  # the files below must be from the same ensembl release, and must match the reference release version that were originally mapped to the reads.
+  isoformExonAnnoation = "Homo_sapiens.GRCh38.110.chr_patch_hapl_scaff.gtf.gz",
+  isoformNtFasta       = "Homo_sapiens.GRCh38.cdna.all.fa.gz",
+  showProgress = TRUE)
+dir.create("report/IsoformSwitchAnalyzer")
+mySwitchList2 <- isoformSwitchAnalysisPart1(
+    switchAnalyzeRlist   = mySwitchList2,
+    pathToOutput = 'report/IsoformSwitchAnalyzer',
+    outputSequences      = TRUE, # change to TRUE when analyzing your own data 
+    prepareForWebServers = TRUE  # change to TRUE if you will use webservers for external sequence analysis
+)
+
+mySwitchList2 <- isoformSwitchAnalysisPart2(
+  switchAnalyzeRlist        = mySwitchList2, 
+  n                         = 15,    # if plotting was enabled, it would only output the top 10 switches
+  removeNoncodinORFs        = TRUE,
+  pathToCPC2resultFile      = "report/IsoformSwitchAnalyzer/extdata/result_cpc2.txt", #http://cpc2.gao-lab.org/
+  pathToPFAMresultFile      = "report/IsoformSwitchAnalyzer/extdata/interpro_results.txt", #https://www.ebi.ac.uk/interpro
+  #pathToIUPred2AresultFile  = system.file("extdata/iupred2a_result.txt.gz"),
+  pathToSignalPresultFile   = "report/IsoformSwitchAnalyzer/extdata/signalP_results.txt",
+  outputPlots               = TRUE  
+)
+
+```
+
+------------------------------------------------------------------------
+
 ## Heatmaps and modules
 
 Pearson correlation was used to cluster **`r nrow(diffGenes)`** differentially expressed genes, which were then represented as heatmap with the data scaled by Zscore for each row.
@@ -445,18 +562,22 @@ Pearson correlation was used to cluster **`r nrow(diffGenes)`** differentially e
 library(gplots)
 library(RColorBrewer)
 myheatcolors <- rev(brewer.pal(name="RdBu", n=11))
-clustRows <- hclust(as.dist(1-cor(t(diffGenes), method="pearson")), method="complete") #cluster rows by pearson correlation
+clustRows <- hclust(as.dist(1-cor(t(diffGenes), method="pearson")), method="complete") 
+
 clustColumns <- hclust(as.dist(1-cor(diffGenes, method="spearman")), method="complete")
 module.assign <- cutree(clustRows, k=2)
 module.color <- rainbow(length(unique(module.assign)), start=0.1, end=0.9) 
 module.color <- module.color[as.vector(module.assign)] 
-heatmap.2(diffGenes, 
+heatmap_full<-heatmap.2(diffGenes, 
           Rowv=as.dendrogram(clustRows), 
           Colv=as.dendrogram(clustColumns),
           RowSideColors=module.color,
           col=myheatcolors, scale='row', labRow=NA,
           density.info="none", trace="none",  
           cexRow=1, cexCol=1, margins=c(8,20))
+save_plot("report/plots/heatmap_full.svg",heatmap_full, base_width = 15, base_height = 7)
+save_plot("report/plots/heatmap_full.png",heatmap_full, base_width = 15, base_height = 7)
+heatmap_full
 ```
 
 ```{r step 6 - modules part 2 (upregulated genes)}
