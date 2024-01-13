@@ -35,7 +35,8 @@ library(DT)
 library(gt)
 library(plotly)
 library(limma)
- 
+library(gplots)
+library(RColorBrewer) 
 knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
 ```
 
@@ -459,7 +460,11 @@ datatable(diffGenes.df,
 
 ## Isoform Switch Analyzer
 
-```{r Isoform Switch Analyzer}
+Transcript isoforms expression and usage change was analysed through the well-established [IsoformSwitchAnalyzeR](https://bioconductor.org/packages/release/bioc/vignettes/IsoformSwitchAnalyzeR/inst/doc/IsoformSwitchAnalyzeR.html).
+All credits to:
+*Soneson et al. Differential analyses for RNA-seq: transcript-level estimates improve gene-level inferences. F1000Research 4, 1521 (2015).*
+
+```{r Isoform Switch Analyzer,results='hide', message=FALSE, warning=FALSE}
 library(IsoformSwitchAnalyzeR)
 
 targets.mod <- targets %>%
@@ -471,7 +476,7 @@ colnames(Txi_trans$abundance) <- c("isoform_id", sampleLabels)
 colnames(Txi_trans$counts) <- c("isoform_id", sampleLabels)
 
 # Define file paths
-gtf_file_path <- "Homo_sapiens.GRCh38.111.chr_patch_hapl_scaff.gtf.gz"
+gtf_file_path <- "Homo_sapiens.GRCh38.110.chr_patch_hapl_scaff.gtf.gz"
 fa_file_path <- "Homo_sapiens.GRCh38.cdna.all.fa.gz"
 
 # Check if files exist
@@ -502,21 +507,40 @@ dir.create("report/isoformSwitch")
 mySwitchList <- isoformSwitchAnalysisCombined(
   switchAnalyzeRlist   = mySwitchList,
   pathToOutput = 'report/isoformSwitch')
-
-extractSwitchSummary(mySwitchList)
-
-extractTopSwitches(
+top_switches<-extractTopSwitches(
   mySwitchList,
   filterForConsequences = TRUE, 
   sortByQvals = TRUE)
 
+```
+```{r summary of Isoform Switch}
+extractSwitchSummary(mySwitchList)
+
+```
+
+```{r table 4 Isoform Switches only html, eval=FALSE}
+
+
+datatable(top_switches[,-1],
+          caption = 'Table 4: Top Isoform Switches',
+          extensions = c('KeyTable', "FixedHeader"), 
+          filter = 'top',
+          options = list(keys = TRUE, 
+                         searchHighlight = TRUE, 
+                         pageLength = 10, 
+                         lengthMenu = c("10", "25", "50", "100")))
+```
+
+```{r example switchplot}
 switchPlot(
   mySwitchList,
-  gene='PURA',
+  gene=top_switches$gene_id[1],
   condition1 = 'adh',
   condition2 = 'sph',
   localTheme = theme_bw())
 ```
+
+
 
 ```{r IsoformSwitch w/ structure analysis, eval=FALSE}
 mySwitchList2 <- importRdata(
@@ -556,59 +580,173 @@ mySwitchList2 <- isoformSwitchAnalysisPart2(
 
 ## Heatmaps and modules
 
-Pearson correlation was used to cluster **`r nrow(diffGenes)`** differentially expressed genes, which were then represented as heatmap with the data scaled by Zscore for each row.
+Pearson correlation was used to cluster **`r nrow(diffGenes)`** differentially expressed genes, which were then represented as heatmap with the data scaled by *Zscore* for each row.
 
-```{r step 6 - modules part 1 (heatmap)}
-library(gplots)
-library(RColorBrewer)
+```{r step 6 - modules part 1 (heatmap), results='hide'}
 myheatcolors <- rev(brewer.pal(name="RdBu", n=11))
 clustRows <- hclust(as.dist(1-cor(t(diffGenes), method="pearson")), method="complete") 
 
 clustColumns <- hclust(as.dist(1-cor(diffGenes, method="spearman")), method="complete")
-module.assign <- cutree(clustRows, k=2)
+module.assign <- cutree(clustRows, k=2) #Important parametre
 module.color <- rainbow(length(unique(module.assign)), start=0.1, end=0.9) 
 module.color <- module.color[as.vector(module.assign)] 
-heatmap_full<-heatmap.2(diffGenes, 
+
+svg(file = "report/plots/heatmap_full.svg")
+heatmap.2(diffGenes, 
           Rowv=as.dendrogram(clustRows), 
           Colv=as.dendrogram(clustColumns),
           RowSideColors=module.color,
           col=myheatcolors, scale='row', labRow=NA,
           density.info="none", trace="none",  
-          cexRow=1, cexCol=1, margins=c(8,20))
-save_plot("report/plots/heatmap_full.svg",heatmap_full, base_width = 15, base_height = 7)
-save_plot("report/plots/heatmap_full.png",heatmap_full, base_width = 15, base_height = 7)
-heatmap_full
+          cexRow=1, cexCol=1, margins=c(7,8))
+dev.off()
+
+png(file = "report/plots/heatmap_full.png")
+heatmap.2(diffGenes, 
+          Rowv=as.dendrogram(clustRows), 
+          Colv=as.dendrogram(clustColumns),
+          RowSideColors=module.color,
+          col=myheatcolors, scale='row', labRow=NA,
+          density.info="none", trace="none",  
+          cexRow=1, cexCol=1, margins=c(7,8))
+dev.off()
+
+```
+```{r heatmap full pdf version}
+heatmap.2(diffGenes, 
+          Rowv=as.dendrogram(clustRows), 
+          Colv=as.dendrogram(clustColumns),
+          RowSideColors=module.color,
+          col=myheatcolors, scale='row', labRow=NA,
+          density.info="none", trace="none",  
+          cexRow=1, cexCol=1, margins=c(7,8))
 ```
 
-```{r step 6 - modules part 2 (upregulated genes)}
-modulePick <- 2 
+
+
+```{r interactive heatmap full onl html, eval=FALSE}
+
+heatmaply(diffGenes, 
+          colors = myheatcolors,
+          Rowv=as.dendrogram(clustRows),
+          RowSideColors=module.color,
+          showticklabels=c(TRUE,FALSE),
+          scale='row',
+          main ="Heatmap across all samples",)
+
+```
+
+```{r step 6 - modules part 2 (cluster upregulated in sph), results='hide'}
+modulePick <- 1  #Be careful with which is which
 myModule_up <- diffGenes[names(module.assign[module.assign %in% modulePick]),] 
 hrsub_up <- hclust(as.dist(1-cor(t(myModule_up), method="pearson")), method="complete") 
 
+svg(file = "report/plots/heatmap_upRegulated.svg")
 heatmap.2(myModule_up, 
           Rowv=as.dendrogram(hrsub_up), 
-          Colv=NA, 
+          Colv=as.dendrogram(clustColumns), 
           labRow = NA,
           col=myheatcolors, scale="row", 
           density.info="none", trace="none", 
           RowSideColors=module.color[module.assign%in%modulePick], margins=c(8,20))
+dev.off()
+
+png(file = "report/plots/heatmap_upRegulated.png")
+heatmap.2(myModule_up, 
+          Rowv=as.dendrogram(hrsub_up), 
+          Colv=as.dendrogram(clustColumns), 
+          labRow = NA,
+          col=myheatcolors, scale="row", 
+          density.info="none", trace="none", 
+          RowSideColors=module.color[module.assign%in%modulePick], margins=c(8,20))
+dev.off()
+
+moduleSymbols <- tibble(geneID = rev(hrsub_up$labels[hrsub_up$order]))
+moduleData <- diffGenes[moduleSymbols$geneID,]
+moduleData.df <- as_tibble(moduleData, rownames = "geneSymbol", .name_repair = "unique")
+write_csv(moduleData.df,"report/tables/module_upRegulatedInSph.csv")
+```
+
+```{r heatmap up pdf version}
+heatmap.2(myModule_up, 
+          Rowv=as.dendrogram(hrsub_up), 
+          Colv=as.dendrogram(clustColumns), 
+          labRow = NA,
+          col=myheatcolors, scale="row", 
+          density.info="none", trace="none", 
+          RowSideColors=module.color[module.assign%in%modulePick], margins=c(8,20))
+```
+
+
+
+```{r interactive heatmap up only html, eval=FALSE}
+
+heatmaply(myModule_up, 
+          colors = myheatcolors,
+          Rowv=as.dendrogram(hrsub_up), 
+          Colv=as.dendrogram(clustColumns),
+          RowSideColors=module.color[module.assign%in%modulePick],
+          showticklabels=c(TRUE,FALSE),
+          scale='row',
+          main ="Heatmap of UpRegulated Genes in Sph")
 
 ```
 
-```{r step 6 - modules part 3 (downregulated genes)}
-modulePick <- 1 
+```{r step 6 - modules part 3 (downregulated genes in sph)}
+modulePick <- 2 
 myModule_down <- diffGenes[names(module.assign[module.assign %in% modulePick]),] 
 hrsub_down <- hclust(as.dist(1-cor(t(myModule_down), method="pearson")), method="complete") 
 
+svg(file = "report/plots/heatmap_downRegulated.svg")
 heatmap.2(myModule_down, 
           Rowv=as.dendrogram(hrsub_down), 
-          Colv=NA, 
+          Colv=as.dendrogram(clustColumns), 
+          labRow = NA,
+          col=myheatcolors, scale="row", 
+          density.info="none", trace="none", 
+          RowSideColors=module.color[module.assign%in%modulePick])
+dev.off()
+
+png(file = "report/plots/heatmap_downRegulated.png")
+heatmap.2(myModule_down, 
+          Rowv=as.dendrogram(hrsub_down), 
+          Colv=as.dendrogram(clustColumns), 
+          labRow = NA,
+          col=myheatcolors, scale="row", 
+          density.info="none", trace="none", 
+          RowSideColors=module.color[module.assign%in%modulePick])
+dev.off()
+
+moduleSymbols <- tibble(geneID = rev(hrsub_down$labels[hrsub_down$order]))
+moduleData <- diffGenes[moduleSymbols$geneID,]
+moduleData.df <- as_tibble(moduleData, rownames = "geneSymbol", .name_repair = "unique")
+write_csv(moduleData.df,"report/tables/module_downRegulatedInSph.csv")
+```
+
+```{r heatmap down pdf version}
+heatmap.2(myModule_down, 
+          Rowv=as.dendrogram(hrsub_down), 
+          Colv=as.dendrogram(clustColumns), 
           labRow = NA,
           col=myheatcolors, scale="row", 
           density.info="none", trace="none", 
           RowSideColors=module.color[module.assign%in%modulePick], margins=c(8,20))
 ```
 
+
+
+```{r interactive heatmap down only html, eval=FALSE}
+
+heatmaply(myModule_down, 
+          colors = myheatcolors,
+          Rowv=as.dendrogram(hrsub_down), 
+          Colv=as.dendrogram(clustColumns),
+          RowSideColors=module.color[module.assign%in%modulePick],
+          showticklabels=c(TRUE,FALSE),
+          scale='row',
+          main ="Heatmap of DownRegulated Genes in Sph")
+
+```
 ## GO enrichment
 
 GO enrichment for the `r nrow(myTopHits)` genes induced by infection
@@ -702,3 +840,6 @@ The output from running 'sessionInfo' is shown below and details all packages an
 ```{r session info}
 sessionInfo()
 ```
+
+```{r final beep, results='hide'}
+beep(3)
