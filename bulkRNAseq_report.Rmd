@@ -37,6 +37,16 @@ library(plotly)
 library(limma)
 library(gplots)
 library(RColorBrewer) 
+library(heatmaply)
+library(tidyverse)
+library(limma)
+library(GSEABase) #functions and methods for Gene Set Enrichment Analysis
+library(Biobase) #base functions for bioconductor; required by GSEABase
+library(GSVA) #Gene Set Variation Analysis, a non-parametric and unsupervised method for estimating variation of gene set enrichment across samples.
+library(gprofiler2) #tools for accessing the GO enrichment results using g:Profiler web resources
+library(clusterProfiler) # provides a suite of tools for functional enrichment analysis
+library(msigdbr) # access to msigdb collections directly within R
+library(enrichplot) # great for making the standard GSEA enrichment plots
 knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
 ```
 
@@ -197,7 +207,7 @@ write.csv(log2.cpm.filtered.norm.df, "report/data/log2_cpm_filtered_norm.csv", r
 write.csv(log2.cpm.filtered.df, "report/data/log2_cpm_filtered.csv", row.names = F)
 ```
 
-```{r step 1 & 2 filtered out samples}
+```{r step 1 and 2 filtered out samples}
 targets<-targets[!samples_nodepth,]
 path <- file.path(targets$sample, "abundance.tsv") # set file paths to your mapped data
 Tx <- transcripts(EnsDb.Hsapiens.v86, columns=c("tx_id", "gene_name"))
@@ -465,7 +475,7 @@ Transcript isoforms expression and usage change was analysed through the well-es
 All credits to:
 *Soneson et al. Differential analyses for RNA-seq: transcript-level estimates improve gene-level inferences. F1000Research 4, 1521 (2015).*
 
-```{r Isoform Switch Analyzer,results='hide', message=FALSE, warning=FALSE}
+```{r Isoform Switch Analyzer,results='hide', message=FALSE, warning=FALSE, eval=FALSE}
 library(IsoformSwitchAnalyzeR)
 
 targets.mod <- targets %>%
@@ -515,7 +525,7 @@ top_switches<-extractTopSwitches(
   sortByQvals = TRUE)
 
 ```
-```{r summary of Isoform Switch}
+```{r summary of Isoform Switch, eval=FALSE}
 extractSwitchSummary(mySwitchList)
 
 ```
@@ -533,7 +543,7 @@ datatable(top_switches[,-1],
                          lengthMenu = c("10", "25", "50", "100")))
 ```
 
-```{r example switchplot}
+```{r example switchplot, eval=FALSE}
 switchPlot(
   mySwitchList,
   gene=top_switches$gene_id[1],
@@ -694,7 +704,7 @@ heatmaply(myModule_up,
 
 ```
 
-```{r step 6 - modules part 3 (downregulated genes in sph)}
+```{r step 6 - modules part 3 (downregulated genes in sph), results='hide'}
 modulePick <- 2 
 myModule_down <- diffGenes[names(module.assign[module.assign %in% modulePick]),] 
 hrsub_down <- hclust(as.dist(1-cor(t(myModule_down), method="pearson")), method="complete") 
@@ -753,37 +763,89 @@ heatmaply(myModule_down,
 
 GO enrichment for the `r nrow(myTopHits)` genes induced by infection
 
-```{r step 7 - functionalEnrichment part 1 (gostplot for upregulated genes)}
-library(tidyverse)
-library(limma)
-library(gplots) #for heatmaps
-library(DT) #interactive and searchable tables of our GSEA results
-library(GSEABase) #functions and methods for Gene Set Enrichment Analysis
-library(Biobase) #base functions for bioconductor; required by GSEABase
-library(GSVA) #Gene Set Variation Analysis, a non-parametric and unsupervised method for estimating variation of gene set enrichment across samples.
-library(gprofiler2) #tools for accessing the GO enrichment results using g:Profiler web resources
-library(clusterProfiler) # provides a suite of tools for functional enrichment analysis
-library(msigdbr) # access to msigdb collections directly within R
-library(enrichplot) # great for making the standard GSEA enrichment plots
+```{r functionalEnrichment part 1 (gostplot for upregulated genes) pdf version}
+#NOTE: The idea here is to provide 3 results: a simple gostplot with no labels, a gostplot highlighting the top 10 terms, and a table with all the results.
 gost.res_up <- gost(rownames(myModule_up), organism = "hsapiens", correction_method = "fdr")
-gostplot(gost.res_up, interactive = F, capped = F) #set interactive=FALSE to get plot for publications
+mygostplot_up<-gostplot(gost.res_up, interactive = F, capped = T) #set interactive=FALSE to get plot for publications
+mytable_up_sorted<-dplyr::arrange(gost.res_up$result,p_value)%>%
+  dplyr::select(term_id,p_value,source,term_name,parents)%>%
+  apply(2,as.character)%>%
+  as_tibble()
+write.csv(mytable_up_sorted, file = "report/tables/GeneOntology_upRegulated.csv")
+
+save_plot("report/plots/manhattanplotFunctionalEnrichment_Up.svg",mygostplot_up)
+save_plot("report/plots/manhattanplotFunctionalEnrichment_Up.png",mygostplot_up)
+
+
+mygostplot_up
+```
+```{r functionalEnrichment part 1 (gostplot top 10 for upregulated genes) pdf version}
+publish_gostplot(
+  mygostplot_up, #your static gostplot from above
+  highlight_terms = mytable_up_sorted$term_id[1:10],
+  filename = NULL,
+  width = NA,
+  height = NA)
+```
+
+```{r step 7 - functionalEnrichment part 1 (gostplot for upregulated genes) html version, eval=FALSE}
+gost.res_up <- gost(rownames(myModule_up), organism = "hsapiens", correction_method = "fdr")
+gostplot(gost.res_up, interactive = T, capped = T) #set interactive=FALSE to get plot for publications
 
 ```
 
-```{r step 7 - functionalEnrichment part 2 (gostplot for downregulated genes)}
+```{r upregulated table sorted only html, eval=FALSE}
+datatable(mytable_up_sorted, 
+          extensions = c('KeyTable', "FixedHeader"), 
+          caption = 'Table 4: Functional Enrichment of Up Regulated genes in Sph',
+          options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100")))
+```
+
+```{r functionalEnrichment part 1 (gostplot for Downregulated genes) pdf version}
+#NOTE: The idea here is to provide 3 results: a simple gostplot with no labels, a gostplot highlighting the top 10 terms, and a table with all the results.
 gost.res_down <- gost(rownames(myModule_down), organism = "hsapiens", correction_method = "fdr")
-gostplot(gost.res_down, interactive = F, capped = T) #set interactive=FALSE to get plot for publications
+mygostplot_down<-gostplot(gost.res_down, interactive = F, capped = T) #set interactive=FALSE to get plot for publications
+mytable_down_sorted<-dplyr::arrange(gost.res_down$result,p_value)%>%
+  dplyr::select(term_id,p_value,source,term_name,parents)%>%
+  apply(2,as.character)%>%
+  as_tibble()
+write.csv(mytable_down_sorted, file = "report/tables/GeneOntology_downRegulated.csv")
+
+save_plot("report/plots/manhattanplotFunctionalEnrichment_Down.svg",mygostplot_down)
+save_plot("report/plots/manhattanplotFunctionalEnrichment_Down.png",mygostplot_down)
+
+
+mygostplot_down
+```
+```{r functionalEnrichment part 1 (gostplot top 10 for downregulated genes) pdf version}
+publish_gostplot(
+  mygostplot_down, #your static gostplot from above
+  highlight_terms = mytable_down_sorted$term_id[1:10],
+  filename = NULL,
+  width = NA,
+  height = NA)
+```
+
+```{r step 7 - functionalEnrichment part 1 (gostplot for downregulated genes) html version, eval=FALSE}
+gost.res_down <- gost(rownames(myModule_down), organism = "hsapiens", correction_method = "fdr")
+gostplot(gost.res_down, interactive = T, capped = T) #set interactive=FALSE to get plot for publications
+
+```
+```{r downregulated table sorted only html, eval=FALSE}
+datatable(mytable_down_sorted, 
+          extensions = c('KeyTable', "FixedHeader"), 
+          caption = 'Table 4: Functional Enrichment of Down Regulated genes in Sph',
+          options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100")))
 ```
 
 ## GSEA
 
 ```{r step 7 - functionalEnrichment part 3 (GSEA table)}
-hs_gsea_c2 <- msigdbr(species = "Homo sapiens", # change depending on species your data came from
-                      category = "C2") %>% # choose your msigdb collection of interest
-  dplyr::select(gs_name, gene_symbol) #just get the columns corresponding to signature name and gene symbols of genes in each signature 
+hs_gsea_c2 <- msigdbr(species = "Homo sapiens",
+                      category = "C2") %>% #  msigdb collection of interest
+  dplyr::select(gs_name, gene_symbol)
 
-# Now that you have your msigdb collections ready, prepare your data
-# grab the dataframe you made in step3 script
+
 # Pull out just the columns corresponding to gene symbols and LogFC for at least one pairwise comparison for the enrichment analysis
 mydata.df.sub <- dplyr::select(mydata.df, geneID, LogFC)
 mydata.gsea <- mydata.df.sub$LogFC
@@ -793,46 +855,69 @@ mydata.gsea <- sort(mydata.gsea, decreasing = TRUE)
 # run GSEA using the 'GSEA' function from clusterProfiler
 myGSEA.res <- GSEA(mydata.gsea, TERM2GENE=hs_gsea_c2, verbose=FALSE)
 myGSEA.df <- as_tibble(myGSEA.res@result)
-```
-
-```{r table 3 only html, eval=FALSE}
-# view results as an interactive table
-datatable(myGSEA.df, 
-          extensions = c('KeyTable', "FixedHeader"), 
-          caption = 'Signatures enriched after Sphere Media',
-          options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100"))) %>%
-  formatRound(columns=c(3:10), digits=2)
 
 ```
+
 
 ```{r step 7 - functionalEnrichment part 4 (enrich plot)}
-# create enrichment plots using the enrichplot package
 gseaplot2(myGSEA.res, 
-          geneSetID = 136, #can choose multiple signatures to overlay in this plot
+          geneSetID = 90, #can choose multiple signatures to overlay in this plot
           pvalue_table = T, #can set this to FALSE for a cleaner plot
-          title = myGSEA.res$Description[136]) #can also turn off this title
-
+          title = myGSEA.res$Description[90]) #can also turn off this title
 ```
 
-```{r step 7 - functionalEnrichment part 5 (bubble plot)}
+```{r make enrichment plots for both phenotypes, results='hide'}
+for (i in 1:15){
+  name<-paste0("report/plots/GSEAplot_SphEnriched",i,".svg")
+  save_plot(name, gseaplot2(myGSEA.res, 
+          geneSetID = which(myGSEA.df$NES>0)[i], #can choose multiple signatures to overlay in this plot
+          pvalue_table = F, #can set this to FALSE for a cleaner plot
+          title = myGSEA.res$Description[i]))
+}
+
+for (i in 1:15){
+  name<-paste0("report/plots/GSEAplot_AdhEnriched",i,".svg")
+  save_plot(name, gseaplot2(myGSEA.res, 
+          geneSetID = which(myGSEA.df$NES<0)[i], #can choose multiple signatures to overlay in this plot
+          pvalue_table = F, #can set this to FALSE for a cleaner plot
+          title = myGSEA.res$Description[i]))
+}
+
+
 # add a variable to this result that matches enrichment direction with phenotype
+
 myGSEA.df <- myGSEA.df %>%
   mutate(phenotype = case_when(
     NES > 0 ~ "sph",
     NES < 0 ~ "adh"))
 abs(myGSEA.df$NES)
+write.csv(myGSEA.df, file = "report/tables/functionalEnrichment.csv")
+```
+
+```{r table of functional enrichment html only, eval=FALSE}
+datatable(myGSEA.df, 
+          extensions = c('KeyTable', "FixedHeader"), 
+          caption = 'Table 4: Functional Enrichment of Down Regulated genes in Sph',
+          options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100")))
+```
+
+
+
+```{r functionalEnrichment part 5 (bubble plot)}
+
 top <- sort(abs(myGSEA.df$NES), index.return=TRUE, decreasing=TRUE)
 # create 'bubble plot' to summarize y signatures across x phenotypes
-ggplot(myGSEA.df[top$ix[1:20],], aes(x=phenotype, y=ID)) + 
+bubbleplot<-ggplot(myGSEA.df[top$ix[1:20],], aes(x=phenotype, y=ID)) + 
   geom_point(aes(size=setSize, color = NES, alpha=-log10(p.adjust))) +
   scale_color_gradient(low="blue", high="red") +
   theme_bw()
-
+save_plot("report/plots/bubbleplotEnichment.svg", bubbleplot)
+save_plot("report/plots/bubbleplotEnichment.png", bubbleplot)
+bubbleplot
 ```
 
 ------------------------------------------------------------------------
 
-## Conclusions
 
 
 ## Session info
