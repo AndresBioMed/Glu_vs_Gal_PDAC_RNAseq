@@ -454,7 +454,7 @@ datatable(diffGenes.df,
           extensions = c('KeyTable', "FixedHeader"), 
           caption = 'Table 2: DEGs after Cancer Stem Cells Enrichment',
           options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100"))) %>%
-  formatRound(columns=c(2:17), digits=2)
+  formatRound(columns=c(2:ncol(diffGenes.df)), digits=2)
 ```
 
 ------------------------------------------------------------------------
