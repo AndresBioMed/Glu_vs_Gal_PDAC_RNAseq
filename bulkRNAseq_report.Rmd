@@ -395,7 +395,7 @@ all_pca
 
 ## Volcano plot
 
-```{r step 5 - diffGenes part 1 (volcano plot)}
+```{r step 5 - diffGenes part 1 (volcano plot), warning=FALSE}
 design <- model.matrix(~0 + media)
 colnames(design) <- levels(media)
 
@@ -423,6 +423,7 @@ vplot <- ggplot(myTopHits.df) +
   labs(title="Volcano plot",
        subtitle = "Cancer Stem Cells enriched Genes",
        caption=paste0("produced on ", Sys.time())) +
+  scale_x_continuous(n.breaks = 8)+
   theme_bw()
 
 save_plot("report/plots/volcano.svg",vplot, base_width = 15, base_height = 7)
