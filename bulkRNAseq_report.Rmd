@@ -507,6 +507,7 @@ dir.create("report/isoformSwitch")
 mySwitchList <- isoformSwitchAnalysisCombined(
   switchAnalyzeRlist   = mySwitchList,
   pathToOutput = 'report/isoformSwitch')
+
 top_switches<-extractTopSwitches(
   mySwitchList,
   filterForConsequences = TRUE, 
