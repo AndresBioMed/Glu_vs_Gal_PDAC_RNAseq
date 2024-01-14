@@ -327,7 +327,7 @@ The **Table 1** includes expression data for `r nrow(myDGEList.filtered)` genes.
 
 ## PCA plot
 
-```{r step 3 - multivariate part 2 (PCA plot)}
+```{r step 3 - multivariate part 2 (PCA plot), warning=FALSE, message=FALSE}
 media <- targets$media
 media <- factor(media)
 rep <- targets$replicate
@@ -380,7 +380,7 @@ small_multiples_plot<-ggplot(pca.pivot) +
   theme(legend.position = "none") +
   coord_flip()
 
-all_pca<-plot_grid(pca.plot_media,small_multiples_plot,labels = c('A', 'B'), label_size = 12, align="hv")
+all_pca<-plot_grid(pca.plot_media,small_multiples_plot,labels = c('A', 'B'), label_size = 12)
 save_plot("report/plots/pca.svg",pca.plot_media, base_width = 15, base_height = 7)
 save_plot("report/plots/pca.png",pca.plot_media, base_width = 15, base_height = 7)
 save_plot("report/plots/pca_sm.svg",small_multiples_plot, base_width = 15, base_height = 7)
