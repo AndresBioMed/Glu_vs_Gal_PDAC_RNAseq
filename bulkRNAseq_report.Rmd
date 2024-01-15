@@ -21,7 +21,6 @@ output:
 ```{r setup, include=FALSE}
 library(rmarkdown)
 library(tinytex)
-library(pfamscanr)
 library(knitr)
 library(beepr)
 library(tidyverse) 
@@ -48,6 +47,7 @@ library(gprofiler2)
 library(clusterProfiler) 
 library(msigdbr) 
 library(enrichplot)
+library(IsoformSwitchAnalyzeR)
 dir.create("report", showWarnings = FALSE, recursive = TRUE)
 dir.create("report/data", showWarnings = FALSE, recursive = TRUE)
 dir.create("report/plots", showWarnings = FALSE, recursive = TRUE)
@@ -491,9 +491,7 @@ Transcript isoforms expression and usage change was analysed through the well-es
 All credits to:
 *Soneson et al. Differential analyses for RNA-seq: transcript-level estimates improve gene-level inferences. F1000Research 4, 1521 (2015).*
 
-```{r Isoform Switch Analyzer,results='hide', message=FALSE, warning=FALSE, eval=FALSE}
-library(IsoformSwitchAnalyzeR)
-
+```{r Isoform Switch Analyzer,results='hide', message=FALSE, warning=FALSE, eval=TRUE}
 targets.mod <- targets %>%
   dplyr::rename(sampleID = sample, condition = media) %>%
   dplyr::select(sampleID, condition)
@@ -588,23 +586,45 @@ mySwitchList2 <- isoformSwitchAnalysisPart1(
     outputSequences      = TRUE, # change to TRUE when analyzing your own data 
     prepareForWebServers = TRUE  # change to TRUE if you will use webservers for external sequence analysis
 )
-input_pfam<-read_lines("report/IsoformSwitchAnalyzer/isoformSwitchAnalyzeR_isoform_AA_complete.fasta")
 
-output_pfam <- pfamscan(
-  fasta_str = input_pfam,
-  email = "andresgordoortiz@gmail.com",
-  httr::config(connecttimeout=60)
+mySwitchList2<-analyzeCPC2(
+    mySwitchList2,
+    "report/test/result_cpc2.txt",
+    codingCutoff = 0.5,
+    removeNoncodinORFs = FALSE,
+    quiet=FALSE
 )
-
+mySwitchList2<-analyzeSignalP(
+    mySwitchList2,
+    "report/test/output_protein_type.txt",
+    minSignalPeptideProbability = 0.5,
+    quiet=FALSE
+)
+mySwitchList2<-analyzePFAM(
+    mySwitchList2,
+    "report/test/pfam.txt",
+    showProgress=TRUE,
+    quiet=FALSE
+)
+mySwitchList2<-analyzeNetSurfP2(
+    mySwitchList2,
+    pathToNetSurfP2resultFile,
+    smoothingWindowSize = 5,
+    probabilityCutoff = 0.5,
+    minIdrSize = 30,
+    showProgress = TRUE,
+    quiet = FALSE
+)
 mySwitchList2 <- isoformSwitchAnalysisPart2(
   switchAnalyzeRlist        = mySwitchList2, 
-  n                         = 15,    # if plotting was enabled, it would only output the top 10 switches
-  removeNoncodinORFs        = TRUE,
-  pathToCPC2resultFile      = "report/IsoformSwitchAnalyzer/extdata/result_cpc2.txt", #http://cpc2.gao-lab.org/
-  pathToPFAMresultFile      = "report/IsoformSwitchAnalyzer/extdata/interpro_results.txt", #https://www.ebi.ac.uk/interpro
-  #pathToIUPred2AresultFile  = system.file("extdata/iupred2a_result.txt.gz"),
-  pathToSignalPresultFile   = "report/IsoformSwitchAnalyzer/extdata/signalP_results.txt",
-  outputPlots               = TRUE  
+  n=15,
+  removeNoncodinORFs        = FALSE,
+  outputPlots               = TRUE, 
+  pathToOutput ="report/test",
+  consequencesToAnalyze =   c(
+        'coding_potential',
+        'ORF_seq_similarity',
+        'NMD_status')
 )
 
 ```
@@ -740,7 +760,7 @@ heatmap.2(myModule_down,
           RowSideColors=module.color[module.assign%in%modulePick])
 dev.off()
 
-png(file = "report/plots/heamaps/heatmap_downRegulated.png")
+png(file = "report/plots/heatmaps/heatmap_downRegulated.png")
 heatmap.2(myModule_down, 
           Rowv=as.dendrogram(hrsub_down), 
           Colv=as.dendrogram(clustColumns), 
@@ -847,6 +867,7 @@ publish_gostplot(
   width = NA,
   height = NA)
 ```
+
 ```{r step 7 - functionalEnrichment part 1 (gostplot for downregulated genes) html version, eval=FALSE}
 gost.res_down <- gost(rownames(myModule_down), organism = "hsapiens", correction_method = "fdr")
 gostplot(gost.res_down, interactive = T, capped = T) #set interactive=FALSE to get plot for publications
@@ -924,7 +945,7 @@ datatable(myGSEA.df,
 ```
 
 
-Finnally, a *Bubble Plot* is produced for the top 20 gene sets. The size of the bubble is proportional to the number of genes in the gene set, the color is proportional to the **NES**, and the alpha is proportional to the -log10(p.adjust). The plot is shown below. **NES** means normalized enrichment score, and it is the primary statistic for ranking genes in a GSEA analysis. The NES represents the degree to which a gene set is overrepresented at the top or bottom of a ranked list of genes. The score is normalized to account for differences in gene set size and in correlations between gene set members and the expression dataset.
+Finnally, a *Bubble Plot* is produced for the top 20 gene sets. The size of the bubble is proportional to the number of genes in the gene set, the color is proportional to the **NES**, and the alpha is proportional to the *-log10(p.adjust)*. The plot is shown below. **NES** means normalized enrichment score, and it is the primary statistic for ranking genes in a GSEA analysis. The NES represents the degree to which a gene set is overrepresented at the top or bottom of a ranked list of genes. The score is normalized to account for differences in gene set size and in correlations between gene set members and the expression dataset.
 ```{r functionalEnrichment part 5 (bubble plot), fig.align='left'}
 
 top <- sort(abs(myGSEA.df$NES), index.return=TRUE, decreasing=TRUE)
