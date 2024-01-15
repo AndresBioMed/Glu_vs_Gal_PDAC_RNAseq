@@ -21,6 +21,7 @@ output:
 ```{r setup, include=FALSE}
 library(rmarkdown)
 library(tinytex)
+library(pfamscanr)
 library(knitr)
 library(beepr)
 library(tidyverse) 
@@ -50,11 +51,18 @@ library(enrichplot)
 dir.create("report", showWarnings = FALSE, recursive = TRUE)
 dir.create("report/data", showWarnings = FALSE, recursive = TRUE)
 dir.create("report/plots", showWarnings = FALSE, recursive = TRUE)
+dir.create("report/plots/QualityofReads", showWarnings = FALSE, recursive = TRUE)
+dir.create("report/plots/multivariate_analysis", showWarnings = FALSE, recursive = TRUE)
+dir.create("report/plots/diff_genes", showWarnings = FALSE, recursive = TRUE)
+dir.create("report/plots/heatmaps", showWarnings = FALSE, recursive = TRUE)
+dir.create("report/plots/FunctionalEnrichment", showWarnings = FALSE, recursive = TRUE)
+dir.create("report/plots/FunctionalEnrichment/GSEA", showWarnings = FALSE, recursive = TRUE)
 dir.create("report/tables", showWarnings = FALSE, recursive = TRUE)
-dir.create("report/IsoformSwitch", showWarnings = FALSE, recursive = TRUE)
+dir.create("report/IsoformSwitchAnalyzer", showWarnings = FALSE, recursive = TRUE)
 knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
 ```
 
+## What can I find in this Report?
 
 
 ## Alignment Protocol
@@ -107,6 +115,7 @@ write.table(design, file = "studydesign.txt", sep = "\t", row.names = FALSE)
 
 ```{r TxImport, echo=FALSE}
 targets <- read_tsv("studydesign.txt")
+all_samples<-targets$sample
 samples_nodepth<-targets$sample %in% c("ERR978114","ERR978122","ERR978189","ERR978196") # remove samples without enough read depth, according to fastqc.
 
 path <- file.path(targets$sample, "abundance.tsv") # set file paths to your mapped data
@@ -278,32 +287,31 @@ p4 <- ggplot(log2.cpm.filtered.norm.df.pivot) +
   theme_bw()
 pt<-plot_grid(p1, p2, p3, p4,  labels = c('A', 'B', 'C', "D"), label_size = 12, align="hv")
 
-#Create folder for plots
-dir.create("report/plots", showWarnings = FALSE, recursive = TRUE)
-save_plot("report/plots/log2_cpm_nonfilt_nonnorm.svg",p1, base_width = 15, base_height = 7)
-save_plot("report/plots/log2_cpm_nonfilt_nonnorm.png",p1, base_width = 15, base_height = 7)
-save_plot("report/plots/log2_cpm_filt_nonnorm.svg",p2, base_width = 15, base_height = 7)
-save_plot("report/plots/log2_cpm_filt_nonnorm.png",p2, base_width = 15, base_height = 7)
-save_plot("report/plots/log2_cpm_filt_norm.svg",p3, base_width = 15, base_height = 7)
-save_plot("report/plots/log2_cpm_filt_norm.png",p3, base_width = 15, base_height = 7)
-save_plot("report/plots/log2_cpm_filt_norm_fastqc_ok.svg",p4, base_width = 15, base_height = 7)
-save_plot("report/plots/log2_cpm_filt_norm_fastqc_ok.png",p4, base_width = 15, base_height = 7)
-save_plot("report/plots/allqualityplots.svg",pt, base_width = 30, base_height = 10)
-save_plot("report/plots/allqualityplots.png",pt, base_width = 30, base_height = 10)
+
+save_plot("report/plots/QualityofReads/log2_cpm_nonfilt_nonnorm.svg",p1, base_width = 15, base_height = 7)
+save_plot("report/plots/QualityofReads/log2_cpm_nonfilt_nonnorm.png",p1, base_width = 15, base_height = 7)
+save_plot("report/plots/QualityofReads/log2_cpm_filt_nonnorm.svg",p2, base_width = 15, base_height = 7)
+save_plot("report/plots/QualityofReads/log2_cpm_filt_nonnorm.png",p2, base_width = 15, base_height = 7)
+save_plot("report/plots/QualityofReads/log2_cpm_filt_norm.svg",p3, base_width = 15, base_height = 7)
+save_plot("report/plots/QualityofReads/log2_cpm_filt_norm.png",p3, base_width = 15, base_height = 7)
+save_plot("report/plots/QualityofReads/log2_cpm_filt_norm_fastqc_ok.svg",p4, base_width = 15, base_height = 7)
+save_plot("report/plots/QualityofReads/log2_cpm_filt_norm_fastqc_ok.png",p4, base_width = 15, base_height = 7)
+save_plot("report/plots/QualityofReads/allqualityplots.svg",pt, base_width = 30, base_height = 10)
+save_plot("report/plots/QualityofReads/allqualityplots.png",pt, base_width = 30, base_height = 10)
 
 pt
 ```
 
-Filtering was carried out to remove lowly expressed genes. Genes with less than 1 count per million (CPM) in at least `r nocpm_threshold` or more samples were filtered out. This is done to make sure that the low expression is due to a lack of significance across **all** conditions, and not an intrinsic propoerty of one of them. This filtering reduced the number of genes from `r nrow(myDGEList)` to `r nrow(myDGEList.filtered)`. Normalisation of samples was performed with [edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html), using *Trimmed Mean of M-value* or *TMM*. This method is based on the assumption that most genes are not differentially expressed. It **calculates a scaling factor for each sample**, which is the median of the ratio of each gene's expression to the geometric mean of all samples. This scaling factor is then used to normalise the expression of each gene in each sample. The normalised expression is then expressed as log2(CPM). The normalisation step is important because it **allows for the comparison of expression between samples**.
+Filtering was carried out to remove lowly expressed genes. Genes with less than 1 count per million (CPM) in at least `r nocpm_threshold` or more samples were filtered out. This is done to make sure that the low expression is due to a lack of significance across **all** conditions, and not an intrinsic property of one of them. This filtering reduced the number of genes from `r nrow(myDGEList)` to `r nrow(myDGEList.filtered)`. Normalisation of samples was performed with [edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html), using *Trimmed Mean of M-value* or *TMM*. This method is based on the assumption that most genes are not differentially expressed. It **calculates a scaling factor for each sample**, which is the median of the ratio of each gene's expression to the geometric mean of all samples. This scaling factor is then used to normalise the expression of each gene in each sample. The normalised expression is then expressed as log2(CPM). The normalisation step is important because it **allows for the comparison of expression between samples**.
 
-According to *fastqc* results, a total of `r sum(samples_nodepth)` samples were removed due to low quality. This is `r round(sum(samples_nodepth)/length(samples_nodepth)*100, 2)`% of the total reads. Filtered out samples are: `r targets$sample[samples_nodepth]`.
+According to *fastqc* results, a total of `r sum(samples_nodepth)` samples were removed due to low quality. This is `r round(sum(samples_nodepth)/length(samples_nodepth)*100, 2)`% of the total reads. Filtered out samples are: `r all_samples[samples_nodepth]`.
 
 
 ------------------------------------------------------------------------
 
 ### Filtered and Normalised data
 
-```{r step 3 - multivariate part 1 (data table)}
+```{r multivariate part 1 (data table)}
 mydata.df <- mutate(log2.cpm.filtered.norm.df,
                     adh.AVG = (ERR978118+ERR978120+ERR978121+ERR978107+ERR978112+ERR978116+ERR978117+ERR978119
 )/8, 
@@ -321,8 +329,8 @@ scatter <- ggplot(mydata.df) +
   geom_point(shape=16, size=1) +
   ggtitle("sph vs. adh") +
   theme_bw()
-save_plot("report/plots/scatter.svg",scatter, base_width = 10, base_height = 10)
-save_plot("report/plots/scatter.png",scatter, base_width = 10, base_height = 10)
+save_plot("report/plots/multivariate_analysis/scatter.svg",scatter, base_width = 10, base_height = 10)
+save_plot("report/plots/multivariate_analysis/scatter.png",scatter, base_width = 10, base_height = 10)
 # only in html ggplotly(scatter)
 scatter
 ```
@@ -345,7 +353,7 @@ The **Table 1** includes expression data for `r nrow(myDGEList.filtered)` genes.
 
 ## PCA plot
 
-```{r step 3 - multivariate part 2 (PCA plot), warning=FALSE, message=FALSE}
+```{r  multivariate part 2 (PCA plot), warning=FALSE, message=FALSE}
 media <- targets$media
 media <- factor(media)
 rep <- targets$replicate
@@ -399,13 +407,13 @@ small_multiples_plot<-ggplot(pca.pivot) +
   coord_flip()
 
 all_pca<-plot_grid(pca.plot_media,small_multiples_plot,labels = c('A', 'B'), label_size = 12)
-save_plot("report/plots/pca.svg",pca.plot_media, base_width = 15, base_height = 7)
-save_plot("report/plots/pca.png",pca.plot_media, base_width = 15, base_height = 7)
-save_plot("report/plots/pca_sm.svg",small_multiples_plot, base_width = 15, base_height = 7)
-save_plot("report/plots/pca_sm.png",small_multiples_plot, base_width = 15, base_height = 7)
-save_plot("report/plots/all_pca.svg",all_pca, base_width = 15, base_height = 7)
-save_plot("report/plots/all_pca.png",all_pca, base_width = 15, base_height = 7)
-
+save_plot("report/plots/multivariate_analysis/pca.svg",pca.plot_media, base_width = 15, base_height = 7)
+save_plot("report/plots/multivariate_analysis/pca.png",pca.plot_media, base_width = 15, base_height = 7)
+save_plot("report/plots/multivariate_analysis/pca_sm.svg",small_multiples_plot, base_width = 15, base_height = 7)
+save_plot("report/plots/multivariate_analysis/pca_sm.png",small_multiples_plot, base_width = 15, base_height = 7)
+save_plot("report/plots/multivariate_analysis/all_pca.svg",all_pca, base_width = 15, base_height = 7)
+save_plot("report/plots/multivariate_analysis/all_pca.png",all_pca, base_width = 15, base_height = 7)
+write.csv(pca.pivot, "report/data/pca_results.csv", row.names = FALSE)
 all_pca
 ```
 
@@ -413,7 +421,7 @@ all_pca
 
 ## Volcano plot
 
-```{r step 5 - diffGenes part 1 (volcano plot), warning=FALSE}
+```{r diffGenes part 1 (volcano plot), warning=FALSE}
 design <- model.matrix(~0 + media)
 colnames(design) <- levels(media)
 
@@ -444,8 +452,8 @@ vplot <- ggplot(myTopHits.df) +
   scale_x_continuous(n.breaks = 8)+
   theme_bw()
 
-save_plot("report/plots/volcano.svg",vplot, base_width = 15, base_height = 7)
-save_plot("report/plots/volcano.png",vplot, base_width = 15, base_height = 7)
+save_plot("report/plots/diff_genes/volcano.svg",vplot, base_width = 15, base_height = 7)
+save_plot("report/plots/diff_genes/volcano.png",vplot, base_width = 15, base_height = 7)
 # Only in html ggplotly(vplot)
 vplot
 
@@ -456,7 +464,7 @@ vplot
 
 ## Table of DEGs
 
-To identify differentially expressed genes, precision weights were first applied to each gene based on its mean-variance relationship using [VOOM](https://genomebiology.biomedcentral.com/articles/10.1186/gb-2014-15-2-r29), then data was normalized using the [TMM method](https://genomebiology.biomedcentral.com/articles/10.1186/gb-2010-11-3-r25) in [EdgeR](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2796818/). Linear modeling and bayesian stats were employed via [Limma](https://academic.oup.com/nar/article/43/7/e47/2414268) to find genes that were up- or down-regulated by **2-fold or more, with a false-discovery rate (FDR) of 0.01**.
+To identify differentially expressed genes, precision weights were first applied to each gene based on its mean-variance relationship using [VOOM](https://genomebiology.biomedcentral.com/articles/10.1186/gb-2014-15-2-r29), then data was normalized using the [TMM method](https://genomebiology.biomedcentral.com/articles/10.1186/gb-2010-11-3-r25) in [EdgeR](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2796818/). Linear modeling and bayesian stats were employed via [Limma](https://academic.oup.com/nar/article/43/7/e47/2414268) to find genes that were up- or down-regulated by **2-fold or more, with a false-discovery rate (FDR) of 0.01**. An interactive table can be found in the *html* version of this report.
 
 ```{r step 5 - diffGenes part 2 (DEG table)}
 results <- decideTests(ebFit, method="global", adjust.method="BH", p.value=0.01, lfc=2)
@@ -479,7 +487,7 @@ datatable(diffGenes.df,
 
 ## Isoform Switch Analyzer
 
-Transcript isoforms expression and usage change was analysed through the well-established [IsoformSwitchAnalyzeR](https://bioconductor.org/packages/release/bioc/vignettes/IsoformSwitchAnalyzeR/inst/doc/IsoformSwitchAnalyzeR.html).
+Transcript isoforms expression and usage change was analysed through the well-established [IsoformSwitchAnalyzeR](https://bioconductor.org/packages/release/bioc/vignettes/IsoformSwitchAnalyzeR/inst/doc/IsoformSwitchAnalyzeR.html). All differential **expressed/usage** genes will have their own *Switch Plot* and *Switch Table* can be found in the *html* version of this report. Here is the *Switch Plot* of the top 1 gene.
 All credits to:
 *Soneson et al. Differential analyses for RNA-seq: transcript-level estimates improve gene-level inferences. F1000Research 4, 1521 (2015).*
 
@@ -521,28 +529,26 @@ mySwitchList <- importRdata(
   isoformNtFasta       = "Homo_sapiens.GRCh38.cdna.all.fa.gz",
   showProgress = TRUE)
 
-dir.create("report/isoformSwitch")
-
 mySwitchList <- isoformSwitchAnalysisCombined(
   switchAnalyzeRlist   = mySwitchList,
-  pathToOutput = 'report/isoformSwitch')
+  pathToOutput = 'report/IsoformSwitchAnalyzer')
 
 top_switches<-extractTopSwitches(
   mySwitchList,
   filterForConsequences = TRUE, 
   sortByQvals = TRUE)
+write.csv(top_switches, "report/tables/table3_IsoformSwitchResults")
 
 ```
-```{r summary of Isoform Switch, eval=FALSE}
+```{r summary of Isoform Switch, eval=TRUE}
 extractSwitchSummary(mySwitchList)
 
 ```
 
-```{r table 4 Isoform Switches only html, eval=FALSE}
-
+```{r table 3 Isoform Switches only html, eval=FALSE}
 
 datatable(top_switches[,-1],
-          caption = 'Table 4: Top Isoform Switches',
+          caption = 'Table 3: Top Isoform Switches',
           extensions = c('KeyTable', "FixedHeader"), 
           filter = 'top',
           options = list(keys = TRUE, 
@@ -551,7 +557,7 @@ datatable(top_switches[,-1],
                          lengthMenu = c("10", "25", "50", "100")))
 ```
 
-```{r example switchplot, eval=FALSE}
+```{r example switchplot, eval=T}
 switchPlot(
   mySwitchList,
   gene=top_switches$gene_id[1],
@@ -578,9 +584,16 @@ mySwitchList2 <- importRdata(
 dir.create("report/IsoformSwitchAnalyzer")
 mySwitchList2 <- isoformSwitchAnalysisPart1(
     switchAnalyzeRlist   = mySwitchList2,
-    pathToOutput = 'report/IsoformSwitchAnalyzer',
+    pathToOutput = 'report/test',
     outputSequences      = TRUE, # change to TRUE when analyzing your own data 
     prepareForWebServers = TRUE  # change to TRUE if you will use webservers for external sequence analysis
+)
+input_pfam<-read_lines("report/IsoformSwitchAnalyzer/isoformSwitchAnalyzeR_isoform_AA_complete.fasta")
+
+output_pfam <- pfamscan(
+  fasta_str = input_pfam,
+  email = "andresgordoortiz@gmail.com",
+  httr::config(connecttimeout=60)
 )
 
 mySwitchList2 <- isoformSwitchAnalysisPart2(
@@ -611,7 +624,7 @@ module.assign <- cutree(clustRows, k=2) #Important parametre
 module.color <- rainbow(length(unique(module.assign)), start=0.1, end=0.9) 
 module.color <- module.color[as.vector(module.assign)] 
 
-svg(file = "report/plots/heatmap_full.svg")
+svg(file = "report/plots/heatmaps/heatmap_full.svg")
 heatmap.2(diffGenes, 
           Rowv=as.dendrogram(clustRows), 
           Colv=as.dendrogram(clustColumns),
@@ -621,7 +634,7 @@ heatmap.2(diffGenes,
           cexRow=1, cexCol=1, margins=c(7,8))
 dev.off()
 
-png(file = "report/plots/heatmap_full.png")
+png(file = "report/plots/heatmaps/heatmap_full.png")
 heatmap.2(diffGenes, 
           Rowv=as.dendrogram(clustRows), 
           Colv=as.dendrogram(clustColumns),
@@ -656,12 +669,12 @@ heatmaply(diffGenes,
 
 ```
 
-```{r step 6 - modules part 2 (cluster upregulated in sph), results='hide'}
+```{r modules part 2 (cluster upregulated in sph), results='hide'}
 modulePick <- 1  #Be careful with which is which
 myModule_up <- diffGenes[names(module.assign[module.assign %in% modulePick]),] 
 hrsub_up <- hclust(as.dist(1-cor(t(myModule_up), method="pearson")), method="complete") 
 
-svg(file = "report/plots/heatmap_upRegulated.svg")
+svg(file = "report/plots/heatmaps/heatmap_upRegulated.svg")
 heatmap.2(myModule_up, 
           Rowv=as.dendrogram(hrsub_up), 
           Colv=as.dendrogram(clustColumns), 
@@ -671,7 +684,7 @@ heatmap.2(myModule_up,
           RowSideColors=module.color[module.assign%in%modulePick], margins=c(8,20))
 dev.off()
 
-png(file = "report/plots/heatmap_upRegulated.png")
+png(file = "report/plots/heatmaps/heatmap_upRegulated.png")
 heatmap.2(myModule_up, 
           Rowv=as.dendrogram(hrsub_up), 
           Colv=as.dendrogram(clustColumns), 
@@ -684,7 +697,7 @@ dev.off()
 moduleSymbols <- tibble(geneID = rev(hrsub_up$labels[hrsub_up$order]))
 moduleData <- diffGenes[moduleSymbols$geneID,]
 moduleData.df <- as_tibble(moduleData, rownames = "geneSymbol", .name_repair = "unique")
-write_csv(moduleData.df,"report/tables/module_upRegulatedInSph.csv")
+write_csv(moduleData.df,"report/tables/table4_module_upRegulatedInSph.csv")
 ```
 
 ```{r heatmap up pdf version}
@@ -717,7 +730,7 @@ modulePick <- 2
 myModule_down <- diffGenes[names(module.assign[module.assign %in% modulePick]),] 
 hrsub_down <- hclust(as.dist(1-cor(t(myModule_down), method="pearson")), method="complete") 
 
-svg(file = "report/plots/heatmap_downRegulated.svg")
+svg(file = "report/plots/heatmaps/heatmap_downRegulated.svg")
 heatmap.2(myModule_down, 
           Rowv=as.dendrogram(hrsub_down), 
           Colv=as.dendrogram(clustColumns), 
@@ -727,7 +740,7 @@ heatmap.2(myModule_down,
           RowSideColors=module.color[module.assign%in%modulePick])
 dev.off()
 
-png(file = "report/plots/heatmap_downRegulated.png")
+png(file = "report/plots/heamaps/heatmap_downRegulated.png")
 heatmap.2(myModule_down, 
           Rowv=as.dendrogram(hrsub_down), 
           Colv=as.dendrogram(clustColumns), 
@@ -740,7 +753,7 @@ dev.off()
 moduleSymbols <- tibble(geneID = rev(hrsub_down$labels[hrsub_down$order]))
 moduleData <- diffGenes[moduleSymbols$geneID,]
 moduleData.df <- as_tibble(moduleData, rownames = "geneSymbol", .name_repair = "unique")
-write_csv(moduleData.df,"report/tables/module_downRegulatedInSph.csv")
+write_csv(moduleData.df,"report/tables/table_5module_downRegulatedInSph.csv")
 ```
 
 ```{r heatmap down pdf version}
@@ -769,7 +782,7 @@ heatmaply(myModule_down,
 ```
 ## GO enrichment
 
-GO enrichment for the `r nrow(myTopHits)` genes induced by infection
+Gene Ontology enrichment for the `r nrow(myTopHits)` genes differentially expressed.
 
 ```{r functionalEnrichment part 1 (gostplot for upregulated genes) pdf version}
 #NOTE: The idea here is to provide 3 results: a simple gostplot with no labels, a gostplot highlighting the top 10 terms, and a table with all the results.
@@ -779,15 +792,16 @@ mytable_up_sorted<-dplyr::arrange(gost.res_up$result,p_value)%>%
   dplyr::select(term_id,p_value,source,term_name,parents)%>%
   apply(2,as.character)%>%
   as_tibble()
-write.csv(mytable_up_sorted, file = "report/tables/GeneOntology_upRegulated.csv")
+write.csv(mytable_up_sorted, file = "report/tables/table6_GeneOntology_upRegulated.csv")
 
-save_plot("report/plots/manhattanplotFunctionalEnrichment_Up.svg",mygostplot_up)
-save_plot("report/plots/manhattanplotFunctionalEnrichment_Up.png",mygostplot_up)
+save_plot("report/plots/FunctionalEnrichment/go_manhattanplotFunctionalEnrichment_Up.svg",mygostplot_up)
+save_plot("report/plots/FunctionalEnrichment/go_manhattanplotFunctionalEnrichment_Up.png",mygostplot_up)
 
 
 mygostplot_up
 ```
-```{r functionalEnrichment part 1 (gostplot top 10 for upregulated genes) pdf version}
+
+```{r functionalEnrichment part 1 (gostplot top 10 for upregulated genes) pdf version, eval=FALSE}
 publish_gostplot(
   mygostplot_up, #your static gostplot from above
   highlight_terms = mytable_up_sorted$term_id[1:10],
@@ -805,7 +819,7 @@ gostplot(gost.res_up, interactive = T, capped = T) #set interactive=FALSE to get
 ```{r upregulated table sorted only html, eval=FALSE}
 datatable(mytable_up_sorted, 
           extensions = c('KeyTable', "FixedHeader"), 
-          caption = 'Table 4: Functional Enrichment of Up Regulated genes in Sph',
+          caption = 'Table 6: Functional Enrichment of Up Regulated genes in Sph',
           options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100")))
 ```
 
@@ -817,15 +831,15 @@ mytable_down_sorted<-dplyr::arrange(gost.res_down$result,p_value)%>%
   dplyr::select(term_id,p_value,source,term_name,parents)%>%
   apply(2,as.character)%>%
   as_tibble()
-write.csv(mytable_down_sorted, file = "report/tables/GeneOntology_downRegulated.csv")
+write.csv(mytable_down_sorted, file = "report/tables/table7_GeneOntology_downRegulated.csv")
 
-save_plot("report/plots/manhattanplotFunctionalEnrichment_Down.svg",mygostplot_down)
-save_plot("report/plots/manhattanplotFunctionalEnrichment_Down.png",mygostplot_down)
+save_plot("report/plots/FunctionalEnrichment/manhattanplotFunctionalEnrichment_Down.svg",mygostplot_down)
+save_plot("report/plots/FunctionalEnrichment/manhattanplotFunctionalEnrichment_Down.png",mygostplot_down)
 
 
 mygostplot_down
 ```
-```{r functionalEnrichment part 1 (gostplot top 10 for downregulated genes) pdf version}
+```{r functionalEnrichment part 1 (gostplot top 10 for downregulated genes) pdf version, eval=FALSE}
 publish_gostplot(
   mygostplot_down, #your static gostplot from above
   highlight_terms = mytable_down_sorted$term_id[1:10],
@@ -833,7 +847,6 @@ publish_gostplot(
   width = NA,
   height = NA)
 ```
-
 ```{r step 7 - functionalEnrichment part 1 (gostplot for downregulated genes) html version, eval=FALSE}
 gost.res_down <- gost(rownames(myModule_down), organism = "hsapiens", correction_method = "fdr")
 gostplot(gost.res_down, interactive = T, capped = T) #set interactive=FALSE to get plot for publications
@@ -842,11 +855,12 @@ gostplot(gost.res_down, interactive = T, capped = T) #set interactive=FALSE to g
 ```{r downregulated table sorted only html, eval=FALSE}
 datatable(mytable_down_sorted, 
           extensions = c('KeyTable', "FixedHeader"), 
-          caption = 'Table 4: Functional Enrichment of Down Regulated genes in Sph',
+          caption = 'Table 7: Functional Enrichment of Down Regulated genes in Sph',
           options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100")))
 ```
 
 ## GSEA
+The 34550 gene sets in the Human Molecular Signatures Database **(MSigDB)** are divided into 9 major collections, and several subcollections. In this analysis, we will use the **C2** collection, which contains gene sets that represent canonical pathways, gene ontology, and other gene sets derived from knowledge in the literature. The top 15 genes set for each conditions will have their own *Gene Set Enrichment Plot*. The table will contain all the results for each gene set. A sample plot is shown below.
 
 ```{r step 7 - functionalEnrichment part 3 (GSEA table)}
 hs_gsea_c2 <- msigdbr(species = "Homo sapiens",
@@ -869,14 +883,14 @@ myGSEA.df <- as_tibble(myGSEA.res@result)
 
 ```{r step 7 - functionalEnrichment part 4 (enrich plot)}
 gseaplot2(myGSEA.res, 
-          geneSetID = 90, #can choose multiple signatures to overlay in this plot
-          pvalue_table = T, #can set this to FALSE for a cleaner plot
-          title = myGSEA.res$Description[90]) #can also turn off this title
+          geneSetID = 1, #can choose multiple signatures to overlay in this plot
+          pvalue_table = F, #can set this to FALSE for a cleaner plot
+          title = myGSEA.res$Description[1]) #can also turn off this title
 ```
 
 ```{r make enrichment plots for both phenotypes, results='hide'}
 for (i in 1:15){
-  name<-paste0("report/plots/GSEAplot_SphEnriched",i,".svg")
+  name<-paste0("report/plots/FunctionalEnrichment/GSEA/GSEAplot_SphEnriched",i,".svg")
   save_plot(name, gseaplot2(myGSEA.res, 
           geneSetID = which(myGSEA.df$NES>0)[i], #can choose multiple signatures to overlay in this plot
           pvalue_table = F, #can set this to FALSE for a cleaner plot
@@ -884,7 +898,7 @@ for (i in 1:15){
 }
 
 for (i in 1:15){
-  name<-paste0("report/plots/GSEAplot_AdhEnriched",i,".svg")
+  name<-paste0("report/plots/FunctionalEnrichment/GSEA/GSEAplot_AdhEnriched",i,".svg")
   save_plot(name, gseaplot2(myGSEA.res, 
           geneSetID = which(myGSEA.df$NES<0)[i], #can choose multiple signatures to overlay in this plot
           pvalue_table = F, #can set this to FALSE for a cleaner plot
@@ -899,19 +913,19 @@ myGSEA.df <- myGSEA.df %>%
     NES > 0 ~ "sph",
     NES < 0 ~ "adh"))
 abs(myGSEA.df$NES)
-write.csv(myGSEA.df, file = "report/tables/functionalEnrichment.csv")
+write.csv(myGSEA.df, file = "report/tables/table8_functionalEnrichment.csv")
 ```
 
 ```{r table of functional enrichment html only, eval=FALSE}
 datatable(myGSEA.df, 
           extensions = c('KeyTable', "FixedHeader"), 
-          caption = 'Table 4: Functional Enrichment of Down Regulated genes in Sph',
+          caption = "Table 8: Enrichment plots for both phenotypes",
           options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100")))
 ```
 
 
-
-```{r functionalEnrichment part 5 (bubble plot)}
+Finnally, a *Bubble Plot* is produced for the top 20 gene sets. The size of the bubble is proportional to the number of genes in the gene set, the color is proportional to the **NES**, and the alpha is proportional to the -log10(p.adjust). The plot is shown below. **NES** means normalized enrichment score, and it is the primary statistic for ranking genes in a GSEA analysis. The NES represents the degree to which a gene set is overrepresented at the top or bottom of a ranked list of genes. The score is normalized to account for differences in gene set size and in correlations between gene set members and the expression dataset.
+```{r functionalEnrichment part 5 (bubble plot), fig.align='left'}
 
 top <- sort(abs(myGSEA.df$NES), index.return=TRUE, decreasing=TRUE)
 # create 'bubble plot' to summarize y signatures across x phenotypes
@@ -919,8 +933,8 @@ bubbleplot<-ggplot(myGSEA.df[top$ix[1:20],], aes(x=phenotype, y=ID)) +
   geom_point(aes(size=setSize, color = NES, alpha=-log10(p.adjust))) +
   scale_color_gradient(low="blue", high="red") +
   theme_bw()
-save_plot("report/plots/bubbleplotEnichment.svg", bubbleplot)
-save_plot("report/plots/bubbleplotEnichment.png", bubbleplot)
+save_plot("report/plots/FunctionalEnrichment/bubbleplotEnichment.svg", bubbleplot)
+save_plot("report/plots/FunctionalEnrichment/bubbleplotEnichment.png", bubbleplot)
 bubbleplot
 ```
 
