@@ -40,23 +40,24 @@ library(RColorBrewer)
 library(heatmaply)
 library(tidyverse)
 library(limma)
-library(GSEABase) #functions and methods for Gene Set Enrichment Analysis
-library(Biobase) #base functions for bioconductor; required by GSEABase
-library(GSVA) #Gene Set Variation Analysis, a non-parametric and unsupervised method for estimating variation of gene set enrichment across samples.
-library(gprofiler2) #tools for accessing the GO enrichment results using g:Profiler web resources
-library(clusterProfiler) # provides a suite of tools for functional enrichment analysis
-library(msigdbr) # access to msigdb collections directly within R
-library(enrichplot) # great for making the standard GSEA enrichment plots
+library(GSEABase)
+library(Biobase)
+library(GSVA)
+library(gprofiler2)
+library(clusterProfiler) 
+library(msigdbr) 
+library(enrichplot)
+dir.create("report", showWarnings = FALSE, recursive = TRUE)
+dir.create("report/data", showWarnings = FALSE, recursive = TRUE)
+dir.create("report/plots", showWarnings = FALSE, recursive = TRUE)
+dir.create("report/tables", showWarnings = FALSE, recursive = TRUE)
+dir.create("report/IsoformSwitch", showWarnings = FALSE, recursive = TRUE)
 knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
 ```
 
-```{r parametres}
-nocpm_threshold<-9 #IMPORTANT PARAMETRE: minimum number of samples with CPM > 1
-```
 
 
-
-## Protocol
+## Alignment Protocol
 
 #### 1. Data Acquisition
 
@@ -71,19 +72,22 @@ nocpm_threshold<-9 #IMPORTANT PARAMETRE: minimum number of samples with CPM > 1
 
 #### 3. Quality Analysis
 
-- The quality of the mapped reads was assessed using [fastqc](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/) and [multiqc](https://multiqc.info/).
+- The quality of the mapped reads was assessed using **[fastqc](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/)** and **[multiqc](https://multiqc.info/)**.
 
 #### 4. Experimental Design
 
 - The project includes a total of 20 single-end samples, comprising 10 replicates for each of the two experimental conditions: **with adherent media** and **with sphere media**.
 
-#### 5. Pre-processing
 
-- For each sample, *fastqc* was executed to evaluate the sequencing quality before further analysis.
-
-#### 6. Pseudo-alignment and Automated Script
+#### 5. Pseudo-alignment and Automated Script
 
 - Pseudo-alignment of the samples to the human reference genome was performed using Kallisto. While a suitable code is provided for the alignment process, a custom, fully automated script [Automatic Kallisto Gene aligner](https://github.com/AndresBioMed/Glu_vs_Gal_PDAC_RNAseq/blob/main/AutomatedKallistoGeneAlignment.sh) was developed *ad hoc* for streamlined analysis. The script requires the input of *.fastqc.gz* files and a cDNA [reference genome](https://www.ensembl.org/info/data/ftp/index.html).
+
+
+#### 6. Pre-processing
+
+- For each sample, *fastqc* was executed to evaluate the sequencing quality before further analysis. If any samples lacked the quality required to perform downstream analysis that will be noted in its section.
+
 
 #### 7. Data Integration
 
@@ -101,7 +105,7 @@ design<-data.frame(sample=c("ERR978118","ERR978120","ERR978121","ERR978193","ERR
 write.table(design, file = "studydesign.txt", sep = "\t", row.names = FALSE)
 ```
 
-```{r step 1 all samples - TxImport, echo=FALSE}
+```{r TxImport, echo=FALSE}
 targets <- read_tsv("studydesign.txt")
 samples_nodepth<-targets$sample %in% c("ERR978114","ERR978122","ERR978189","ERR978196") # remove samples without enough read depth, according to fastqc.
 
@@ -124,7 +128,9 @@ Txi_gene <- tximport(paste0("kallisto/",path),
 
 ### Filtering & normalisation
 
-```{r step2 - dataWrangling}
+```{r dataWrangling}
+nocpm_threshold<-9 #IMPORTANT PARAMETRE: minimum number of samples with CPM > 1
+
 sampleLabels <- targets$sample
 myDGEList <- DGEList(Txi_gene$counts)
 log2.cpm <- cpm(myDGEList, log=TRUE)
@@ -148,6 +154,7 @@ p1 <- ggplot(log2.cpm.df.pivot) +
        title="Log2 Counts per Million (CPM)",
        subtitle="unfiltered, non-normalized",
        caption=paste0("produced on ", Sys.time())) +
+  scale_x_discrete(guide = guide_axis(angle = 60))+
   theme_bw()
 
 cpm <- cpm(myDGEList)
@@ -175,6 +182,7 @@ p2 <- ggplot(log2.cpm.filtered.df.pivot) +
        title="Log2 Counts per Million (CPM)",
        subtitle="filtered, non-normalised",
        caption=paste0("produced on ", Sys.time())) +
+  scale_x_discrete(guide = guide_axis(angle = 60))+
   theme_bw()
 
 myDGEList.filtered.norm <- calcNormFactors(myDGEList.filtered, method = "TMM")
@@ -199,15 +207,14 @@ p3 <- ggplot(log2.cpm.filtered.norm.df.pivot) +
        title="Log2 Counts per Million (CPM)",
        subtitle="filtered, TMM normalised",
        caption=paste0("produced on ", Sys.time())) +
+  scale_x_discrete(guide = guide_axis(angle = 60))+
   theme_bw()
 
-#Create the directories for output results
-dir.create("report/data", showWarnings = FALSE, recursive = TRUE)
 write.csv(log2.cpm.filtered.norm.df, "report/data/log2_cpm_filtered_norm.csv", row.names = F)
 write.csv(log2.cpm.filtered.df, "report/data/log2_cpm_filtered.csv", row.names = F)
 ```
 
-```{r step 1 and 2 filtered out samples}
+```{r step 1 and 2 -filtered out samples-}
 targets<-targets[!samples_nodepth,]
 path <- file.path(targets$sample, "abundance.tsv") # set file paths to your mapped data
 Tx <- transcripts(EnsDb.Hsapiens.v86, columns=c("tx_id", "gene_name"))
@@ -267,6 +274,7 @@ p4 <- ggplot(log2.cpm.filtered.norm.df.pivot) +
        title="Log2 Counts per Million (CPM)",
        subtitle="filtered, TMM normalised, fastQC passed",
        caption=paste0("produced on ", Sys.time())) +
+  scale_x_discrete(guide = guide_axis(angle = 60))+
   theme_bw()
 pt<-plot_grid(p1, p2, p3, p4,  labels = c('A', 'B', 'C', "D"), label_size = 12, align="hv")
 
