@@ -426,7 +426,9 @@ all_pca
 
 ## Volcano plot
 
-```{r diffGenes part 1 (volcano plot), warning=FALSE}
+An **important** note: all the contrasts, design matrix and differential expression analysis are made according to this formula ***(media:sph - media: adh)***. This means that a *logfold change* > 0 shows that the first condition is upregulated, whereas a *logfold change* < 0 shows downregulation.
+
+```{r diffGenes volcano plot, warning=FALSE, fig.cap="Volcano plot of differencial gene expression.The lines delimit the 2 log-fold change and 0.01 adjusted p-value (FDR) thresholds."}
 design <- model.matrix(~0 + media)
 colnames(design) <- levels(media)
 
@@ -560,7 +562,7 @@ datatable(top_switches[,-1],
                          lengthMenu = c("10", "25", "50", "100")))
 ```
 
-```{r example switchplot, out.width="50%"}
+```{r example switchplot, out.width="50%", fig.cap="Sample of a SwitchPlot. All SwitchPlots generated can be found in their corresponding folder."}
 switchPlot(
   mySwitchList,
   gene=top_switches$gene_id[1],
@@ -636,9 +638,9 @@ mySwitchList2 <- isoformSwitchAnalysisPart2(
 
 ------------------------------------------------------------------------
 
-## Heatmaps and modules
+## Heatmaps and Modules
 
-Pearson correlation was used to cluster **`r nrow(diffGenes)`** differentially expressed genes, which were then represented as heatmap with the data scaled by *Zscore* for each row.
+Pearson correlation was used to cluster **`r nrow(diffGenes)`** differentially expressed genes, which were then represented as heatmap with the data scaled by *Zscore* for each row. On the other hand, Spearman correlation was used to cluster all samples. Two *modules* can be seen, being either up- or down-regulated depending on the condition of the samples.
 
 ```{r step 6 - modules part 1 (heatmap), results='hide'}
 myheatcolors <- rev(brewer.pal(name="RdBu", n=11))
@@ -670,7 +672,7 @@ heatmap.2(diffGenes,
 dev.off()
 
 ```
-```{r heatmap full pdf version}
+```{r heatmap full pdf version, fig.cap="Heatmap of all differentially expressed genes, clustered by genes and samples. Scaled by rows to facilitate sample recognition and differentiation", fig.align="center"}
 heatmap.2(diffGenes, 
           Rowv=as.dendrogram(clustRows), 
           Colv=as.dendrogram(clustColumns),
@@ -725,16 +727,6 @@ moduleData.df <- as_tibble(moduleData, rownames = "geneSymbol", .name_repair = "
 write_csv(moduleData.df,"report/tables/table4_module_upRegulatedInSph.csv")
 ```
 
-```{r heatmap up pdf version}
-heatmap.2(myModule_up, 
-          Rowv=as.dendrogram(hrsub_up), 
-          Colv=as.dendrogram(clustColumns), 
-          labRow = NA,
-          col=myheatcolors, scale="row", 
-          density.info="none", trace="none", 
-          RowSideColors=module.color[module.assign%in%modulePick], margins=c(8,20))
-```
-
 
 
 ```{r interactive heatmap up only html, eval=FALSE}
@@ -781,16 +773,6 @@ moduleData.df <- as_tibble(moduleData, rownames = "geneSymbol", .name_repair = "
 write_csv(moduleData.df,"report/tables/table_5module_downRegulatedInSph.csv")
 ```
 
-```{r heatmap down pdf version}
-heatmap.2(myModule_down, 
-          Rowv=as.dendrogram(hrsub_down), 
-          Colv=as.dendrogram(clustColumns), 
-          labRow = NA,
-          col=myheatcolors, scale="row", 
-          density.info="none", trace="none", 
-          RowSideColors=module.color[module.assign%in%modulePick], margins=c(8,20))
-```
-
 
 
 ```{r interactive heatmap down only html, eval=FALSE}
@@ -809,7 +791,8 @@ heatmaply(myModule_down,
 
 Gene Ontology enrichment for the `r nrow(myTopHits)` genes differentially expressed.
 
-```{r functionalEnrichment part 1 (gostplot for upregulated genes) pdf version}
+### Ontology of Up-Regulated Genes
+```{r functionalEnrichment part 1 (gostplot for upregulated genes) pdf version, fig.cap="Manhattan plot of GO enrichment for upregulated genes"}
 #NOTE: The idea here is to provide 3 results: a simple gostplot with no labels, a gostplot highlighting the top 10 terms, and a table with all the results.
 gost.res_up <- gost(rownames(myModule_up), organism = "hsapiens", correction_method = "fdr")
 mygostplot_up<-gostplot(gost.res_up, interactive = F, capped = T) #set interactive=FALSE to get plot for publications
@@ -848,7 +831,9 @@ datatable(mytable_up_sorted,
           options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100")))
 ```
 
-```{r functionalEnrichment part 1 (gostplot for Downregulated genes) pdf version}
+### Ontology of Down-Regulated Genes
+
+```{r functionalEnrichment part 1 (gostplot for Downregulated genes) pdf version, fig.cap="Manhattan plot of GO enrichment for downregulated genes"}
 #NOTE: The idea here is to provide 3 results: a simple gostplot with no labels, a gostplot highlighting the top 10 terms, and a table with all the results.
 gost.res_down <- gost(rownames(myModule_down), organism = "hsapiens", correction_method = "fdr")
 mygostplot_down<-gostplot(gost.res_down, interactive = F, capped = T) #set interactive=FALSE to get plot for publications
@@ -907,7 +892,7 @@ myGSEA.df <- as_tibble(myGSEA.res@result)
 ```
 
 
-```{r step 7 - functionalEnrichment part 4 (enrich plot)}
+```{r step 7 - functionalEnrichment part 4 (enrich plot), fig.cap="Sample of a Gene Set Enrichment Plot"}
 gseaplot2(myGSEA.res, 
           geneSetID = 1, #can choose multiple signatures to overlay in this plot
           pvalue_table = F, #can set this to FALSE for a cleaner plot
@@ -950,8 +935,9 @@ datatable(myGSEA.df,
 ```
 
 
-Finnally, a *Bubble Plot* is produced for the top 20 gene sets. The size of the bubble is proportional to the number of genes in the gene set, the color is proportional to the **NES**, and the alpha is proportional to the *-log10(p.adjust)*. The plot is shown below. **NES** means normalized enrichment score, and it is the primary statistic for ranking genes in a GSEA analysis. The NES represents the degree to which a gene set is overrepresented at the top or bottom of a ranked list of genes. The score is normalized to account for differences in gene set size and in correlations between gene set members and the expression dataset.
-```{r functionalEnrichment part 5 (bubble plot), fig.align='left'}
+Finnally, a *Bubble Plot* is produced for the top 20 gene sets. The size of the bubble is proportional to the number of genes in the gene set, the color is proportional to the **NES**, and the alpha is proportional to the *-log10(p.adjust)*. The plot is shown below. **NES** means normalized enrichment score, and it is the primary statistic for ranking genes in a GSEA analysis. It represents the degree to which a gene set is overrepresented at the top or bottom of a ranked list of genes. The score is normalized to account for differences in gene set size and in correlations between gene set members and the expression dataset. The **NES** score can be either >0, which means is enriched in the *sph* condition, or <0, which means it is enriched in the *adh* condition. The table provided shows the absolute score beacause it has already been classified in one the two conditions.
+
+```{r functionalEnrichment part 5 (bubble plot), fig.align='left', fig.cap="Bubble plot of the top 20 gene sets within the C2 Collection"}
 
 top <- sort(abs(myGSEA.df$NES), index.return=TRUE, decreasing=TRUE)
 # create 'bubble plot' to summarize y signatures across x phenotypes
