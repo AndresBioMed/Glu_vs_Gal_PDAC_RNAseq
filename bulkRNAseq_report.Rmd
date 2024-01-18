@@ -63,7 +63,23 @@ knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
 ```
 
 ## What can I find in this Report?
+This analysis performs a fully crafted **Transcriptomics Protocol**, from read mapping, filtering and normalisation, up to Differential Gene Expression, Ontology enrichment or qualitative Isoform usage analysis.This a list of everything you will find within the folders provided.
 
+#### Mapping Folder
+
+1. **Kallisto**: All the output from *Kallisto*, the pseudoaligner of your reads to the reference genome.
+2. **FastQC**: Report of the quality and depth of your reads for each sample.
+3. **MultiQC**: Summarised report of the quality, depth and alignment success of your reads for every sample, summarized in a single convenient file.
+
+#### Report Folder
+##### Data
+1. **log2_cpm.csv**: Excel file of the Counts per million of all genes across samples, non filtered, non normalised.
+
+2.**log2_cpm_filtered.csv**: Excel file of the Counts per million of all genes across samples, filtered, non normalised.
+
+3.**log2_cpm_filtered_norm.csv**: Excel file of the Counts per million of all genes across samples, filtered, normalised.
+
+4. **pca_results.csv**: Excel file with the results and loadings of the PCA analysis.
 
 ## Alignment Protocol Used
 
@@ -219,6 +235,7 @@ p3 <- ggplot(log2.cpm.filtered.norm.df.pivot) +
   scale_x_discrete(guide = guide_axis(angle = 60))+
   theme_bw()
 
+write.csv(log2.cpm.df, "report/data/log2_cpm.csv", row.names = F)
 write.csv(log2.cpm.filtered.norm.df, "report/data/log2_cpm_filtered_norm.csv", row.names = F)
 write.csv(log2.cpm.filtered.df, "report/data/log2_cpm_filtered.csv", row.names = F)
 ```
