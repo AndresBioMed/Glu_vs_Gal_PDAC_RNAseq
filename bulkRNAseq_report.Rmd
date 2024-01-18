@@ -65,7 +65,7 @@ knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
 ## What can I find in this Report?
 
 
-## Alignment Protocol
+## Alignment Protocol Used
 
 #### 1. Data Acquisition
 
@@ -223,7 +223,7 @@ write.csv(log2.cpm.filtered.norm.df, "report/data/log2_cpm_filtered_norm.csv", r
 write.csv(log2.cpm.filtered.df, "report/data/log2_cpm_filtered.csv", row.names = F)
 ```
 
-```{r step 1 and 2 -filtered out samples-}
+```{r step 1 and 2 -filtered out samples-, fig.cap="Violin plots of log2 CPM values for each sample. A) Raw reads after mapping. B) Genes with more than 9 samples with CPM < 1 were filtered out. C) Normalisation with TMM., D) Tidy Samples with a positive FastQC Result to be used in the downstream analysis"}
 targets<-targets[!samples_nodepth,]
 path <- file.path(targets$sample, "abundance.tsv") # set file paths to your mapped data
 Tx <- transcripts(EnsDb.Hsapiens.v86, columns=c("tx_id", "gene_name"))
@@ -304,14 +304,19 @@ pt
 
 Filtering was carried out to remove lowly expressed genes. Genes with less than 1 count per million (CPM) in at least `r nocpm_threshold` or more samples were filtered out. This is done to make sure that the low expression is due to a lack of significance across **all** conditions, and not an intrinsic property of one of them. This filtering reduced the number of genes from `r nrow(myDGEList)` to `r nrow(myDGEList.filtered)`. Normalisation of samples was performed with [edgeR](https://bioconductor.org/packages/release/bioc/html/edgeR.html), using *Trimmed Mean of M-value* or *TMM*. This method is based on the assumption that most genes are not differentially expressed. It **calculates a scaling factor for each sample**, which is the median of the ratio of each gene's expression to the geometric mean of all samples. This scaling factor is then used to normalise the expression of each gene in each sample. The normalised expression is then expressed as log2(CPM). The normalisation step is important because it **allows for the comparison of expression between samples**.
 
-According to *fastqc* results, a total of `r sum(samples_nodepth)` samples were removed due to low quality. This is `r round(sum(samples_nodepth)/length(samples_nodepth)*100, 2)`% of the total reads. Filtered out samples are: `r all_samples[samples_nodepth]`.
+According to *fastQC* results, a total of `r sum(samples_nodepth)` samples were removed due to low quality. This is `r round(sum(samples_nodepth)/length(samples_nodepth)*100, 2)`% of the total reads. Filtered out samples are: `r all_samples[samples_nodepth]`.
+
+```{r Design Dataframe}
+knitr::kable(design, caption = "Design Dataframe for downstream analysis", format = "latex", booktabs = TRUE)
+```
+
 
 
 ------------------------------------------------------------------------
 
 ### Filtered and Normalised data
 
-```{r multivariate part 1 (data table)}
+```{r multivariate, fig.cap="Scatter plot showing the divergence in the average expression of every gene between the two conditions"}
 mydata.df <- mutate(log2.cpm.filtered.norm.df,
                     adh.AVG = (ERR978118+ERR978120+ERR978121+ERR978107+ERR978112+ERR978116+ERR978117+ERR978119
 )/8, 
@@ -353,7 +358,7 @@ The **Table 1** includes expression data for `r nrow(myDGEList.filtered)` genes.
 
 ## PCA plot
 
-```{r  multivariate part 2 (PCA plot), warning=FALSE, message=FALSE}
+```{r  multivariate part 2 (PCA plot), warning=FALSE, message=FALSE, fig.cap="A) Principal Component Analysis plot coloured by condition. The 95% confidence interval is shown. B) Small Multiples Plot showing the loadings, or contribution, of sample gene to the first 4 principal components."}
 media <- targets$media
 media <- factor(media)
 rep <- targets$replicate
