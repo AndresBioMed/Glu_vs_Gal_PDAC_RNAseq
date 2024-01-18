@@ -464,7 +464,7 @@ vplot
 
 ## Table of DEGs
 
-To identify differentially expressed genes, precision weights were first applied to each gene based on its mean-variance relationship using [VOOM](https://genomebiology.biomedcentral.com/articles/10.1186/gb-2014-15-2-r29), then data was normalized using the [TMM method](https://genomebiology.biomedcentral.com/articles/10.1186/gb-2010-11-3-r25) in [EdgeR](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2796818/). Linear modeling and bayesian stats were employed via [Limma](https://academic.oup.com/nar/article/43/7/e47/2414268) to find genes that were up- or down-regulated by **2-fold or more, with a false-discovery rate (FDR) of 0.01**. An interactive table can be found in the *html* version of this report.
+To identify differentially expressed genes, precision weights were first applied to each gene based on its mean-variance relationship using [VOOM](https://genomebiology.biomedcentral.com/articles/10.1186/gb-2014-15-2-r29), then data was normalized using the [TMM method](https://genomebiology.biomedcentral.com/articles/10.1186/gb-2010-11-3-r25) in [EdgeR](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2796818/). Linear modeling and bayesian stats were employed via [Limma](https://academic.oup.com/nar/article/43/7/e47/2414268) to find genes that were up- or down-regulated by **2-logfold or more, with a false-discovery rate (FDR) of 0.01**. An interactive table can be found in the *html* version of this report.
 
 ```{r step 5 - diffGenes part 2 (DEG table)}
 results <- decideTests(ebFit, method="global", adjust.method="BH", p.value=0.01, lfc=2)
@@ -491,7 +491,7 @@ Transcript isoforms expression and usage change was analysed through the well-es
 All credits to:
 *Soneson et al. Differential analyses for RNA-seq: transcript-level estimates improve gene-level inferences. F1000Research 4, 1521 (2015).*
 
-```{r Isoform Switch Analyzer,results='hide', message=FALSE, warning=FALSE, eval=TRUE}
+```{r Isoform Switch Analyzer, message=FALSE, warning=F, results='hide'}
 targets.mod <- targets %>%
   dplyr::rename(sampleID = sample, condition = media) %>%
   dplyr::select(sampleID, condition)
@@ -555,7 +555,7 @@ datatable(top_switches[,-1],
                          lengthMenu = c("10", "25", "50", "100")))
 ```
 
-```{r example switchplot, eval=T}
+```{r example switchplot, out.width="50%"}
 switchPlot(
   mySwitchList,
   gene=top_switches$gene_id[1],
@@ -953,7 +953,8 @@ top <- sort(abs(myGSEA.df$NES), index.return=TRUE, decreasing=TRUE)
 bubbleplot<-ggplot(myGSEA.df[top$ix[1:20],], aes(x=phenotype, y=ID)) + 
   geom_point(aes(size=setSize, color = NES, alpha=-log10(p.adjust))) +
   scale_color_gradient(low="blue", high="red") +
-  theme_bw()
+  theme_bw() +
+  theme(legend.position="bottom")
 save_plot("report/plots/FunctionalEnrichment/bubbleplotEnichment.svg", bubbleplot)
 save_plot("report/plots/FunctionalEnrichment/bubbleplotEnichment.png", bubbleplot)
 bubbleplot
