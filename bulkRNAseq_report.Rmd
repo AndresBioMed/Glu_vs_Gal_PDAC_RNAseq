@@ -323,10 +323,6 @@ Filtering was carried out to remove lowly expressed genes. Genes with less than 
 
 According to *fastQC* results, a total of `r sum(samples_nodepth)` samples were removed due to low quality. This is `r round(sum(samples_nodepth)/length(samples_nodepth)*100, 2)`% of the total reads. Filtered out samples are: `r all_samples[samples_nodepth]`.
 
-```{r Design Dataframe}
-knitr::kable(design, caption = "Design Dataframe for downstream analysis", format = "latex", booktabs = TRUE)
-```
-
 
 
 ------------------------------------------------------------------------
