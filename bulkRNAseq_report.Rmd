@@ -456,6 +456,7 @@ myTopHits <- topTable(ebFit, adjust ="BH", coef=1, number=40000, sort.by="logFC"
 
 myTopHits.df <- myTopHits %>%
   as_tibble(rownames = "geneID")
+
 write.csv(myTopHits.df, "report/tables/statistics_results.csv", row.names = FALSE)
 
 vplot <- ggplot(myTopHits.df) +
@@ -936,7 +937,7 @@ myGSEA.df <- myGSEA.df %>%
   mutate(phenotype = case_when(
     NES > 0 ~ "sph",
     NES < 0 ~ "adh"))
-abs(myGSEA.df$NES)
+myGSEA.df$NES<-abs(myGSEA.df$NES)
 write.csv(myGSEA.df, file = "report/tables/table8_functionalEnrichment.csv")
 ```
 
