@@ -52,6 +52,9 @@ mkdir -p ~/new_AKG/index
 # Prompt the user for the input folder
 read -p "Enter the absolute path (use realpath) to the input folder (containing *.gz files): " input_folder
 
+# Prompt the user to choose between single-end and paired-end data
+read -p "Enter 's' for single-end data or 'p' for paired-end data: " data_type
+
 # Prompt the user for the threads to be used
 read -p "Enter the number of threads available in your machine: " threads
 
@@ -64,6 +67,8 @@ if [ "$has_index" = "y" ]; then
 else
     # Prompt the user for the output folder
     read -p "Enter the absolute path to the reference genome file (containing a *.fa file): " genome_file
+    
+    echo "--> AKG will now create an index based on your reference genome"
 
     # Create the index for the reference genome
     cd ~/new_AKG/index || exit
@@ -88,25 +93,51 @@ fastqc *.gz -t $threads
 cd $input_folder || exit
 mv *fastqc* ~/new_AKG/fastqc
 echo "--> AKG has finished analyzing the quality of your samples with FastQC"
-echo "--> AKG will now create an index based on your reference genome"
 
 
 cd ~/new_AKG/kallisto || exit
 
 # Iterate through all ".gz" files in the input folder
-for input_file in "$input_folder"/*.gz; do
-    # Extract the base name of the input file (without the path and extension)
-    base_name=$(basename -s .fastq.gz "$input_file")
+if [ "$data_type" = "s" ]; then
+    # Single-end data
+    for input_file in "$input_folder"/*.gz; do
+        # Extract the base name of the input file (without the path and extension)
+        base_name=$(basename -s .fastq.gz "$input_file")
 
-    # Create an output folder for the sample
-    sample_output_folder="$base_name"
-    mkdir -p "$sample_output_folder"
-    echo "-> The sample $base_name is being aligned now by Kallisto"
+        # Create an output folder for the sample
+        sample_output_folder="$base_name"
+        mkdir -p "$sample_output_folder"
+        echo "-> The sample $base_name is being aligned now by Kallisto"
 
-    # Run kallisto quant for each input file
-    kallisto quant -i "$index_file" -o "$sample_output_folder" -t "$threads" --single -l 250 -s 30 "$input_file" > "$sample_output_folder/$base_name.log" 2>&1
-    echo "-> Kallisto has finished aligning $base_name, a log file has also been produced"
-done
+        # Run kallisto quant for each input file
+        kallisto quant -i "$index_file" -o "$sample_output_folder" -t "$threads" --single -l 250 -s 30 "$input_file" > "$sample_output_folder/$base_name.log" 2>&1
+        echo "-> Kallisto has finished aligning $base_name, a log file has also been produced"
+    done
+elif [ "$data_type" = "p" ]; then
+    # Paired-end data
+    for input_file1 in "$input_folder"/*_f1.fq.gz; do
+        # Extract the base name of the first paired-end input file (without the path and extension)
+        base_name=$(basename -s _f1.fq.gz "$input_file1")
+
+        # Check if the corresponding second paired-end file exists
+        input_file2="$input_folder/$base_name"_r2.fq.gz
+        if [ -e "$input_file2" ]; then
+            # Create an output folder for the sample
+            sample_output_folder="$base_name"
+            mkdir -p "$sample_output_folder"
+            echo "-> The sample $base_name is being aligned now by Kallisto"
+
+            # Run kallisto quant for paired-end input files
+            kallisto quant -i "$index_file" -o "$sample_output_folder" -t "$threads" "$input_file1" "$input_file2" > "$sample_output_folder/$base_name.log" 2>&1
+            echo "-> Kallisto has finished aligning $base_name, a log file has also been produced"
+        else
+            echo "Warning: Paired-end file for $base_name not found. Skipping..."
+        fi
+    done
+else
+    echo "Invalid data type. Please choose 's' for single-end or 'p' for paired-end data."
+    exit 1
+fi
 
 echo "--> AKG has now Finished processing all your samples"
 echo "Summarising results via MultiQC"
