@@ -145,3 +145,5 @@ echo "Summarising results via MultiQC"
 cd ~/new_AKG || exit
 multiqc -d .
 echo "AKG has finished, the final report has been produced alongside with the pseudoalignments"
+
+
