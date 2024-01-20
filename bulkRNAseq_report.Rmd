@@ -21,6 +21,7 @@ output:
 ```{r setup, include=FALSE}
 library(rmarkdown)
 library(tinytex)
+library(readxl)
 library(knitr)
 library(beepr)
 library(tidyverse) 
@@ -61,6 +62,18 @@ dir.create("report/tables", showWarnings = FALSE, recursive = TRUE)
 dir.create("report/IsoformSwitchAnalyzer", showWarnings = FALSE, recursive = TRUE)
 knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
 ```
+
+```{r settings}
+# Change and adapt lines 343-348, 355, 459
+# Check the modules are ok o the heatmaps
+condition1<-"Sphere"
+condition_control<-"Adherent"
+explanation<- "Cancer Stem Cell enriched genes"
+discarded_samples<-c("ERR978114","ERR978122","ERR978189","ERR978196")
+nocpm_threshold<-9 #IMPORTANT PARAMETRE: minimum number of samples with CPM > 1
+
+```
+
 
 ## What can I find in this Report?
 This analysis performs a fully crafted **Transcriptomics Protocol**, from read mapping, filtering and normalisation, up to Differential Gene Expression, Ontology enrichment or qualitative Isoform usage analysis.This a list of everything you will find within the folders provided.
@@ -123,7 +136,7 @@ This analysis performs a fully crafted **Transcriptomics Protocol**, from read m
 
 ```{r studydesign, echo=FALSE}
 design<-data.frame(sample=c("ERR978118","ERR978120","ERR978121","ERR978193","ERR978107","ERR978112","ERR978114","ERR978184","ERR978185","ERR978186","ERR978187","ERR978191","ERR978194","ERR978116","ERR978117","ERR978119","ERR978122","ERR978189","ERR978195","ERR978196"),
-                   media=c("adh","adh","adh","sph","adh","adh","adh","sph","sph","sph","sph","sph","sph","adh","adh","adh","adh","sph","sph","sph"),
+                   condition=c("adh","adh","adh","sph","adh","adh","adh","sph","sph","sph","sph","sph","sph","adh","adh","adh","adh","sph","sph","sph"),
                    replicate=c("b","b","b","b","a","a","a","a","a","a","a","b","b","b","b","b","b","a","b","b"))
 #Write design into a .txt file called studydesign
 write.table(design, file = "studydesign.txt", sep = "\t", row.names = FALSE)
@@ -132,7 +145,7 @@ write.table(design, file = "studydesign.txt", sep = "\t", row.names = FALSE)
 ```{r TxImport, echo=FALSE}
 targets <- read_tsv("studydesign.txt")
 all_samples<-targets$sample
-samples_nodepth<-targets$sample %in% c("ERR978114","ERR978122","ERR978189","ERR978196") # remove samples without enough read depth, according to fastqc.
+samples_nodepth<-targets$sample %in% discarded_samples # remove samples without enough read depth, according to fastqc.
 
 path <- file.path(targets$sample, "abundance.tsv") # set file paths to your mapped data
 Tx <- transcripts(EnsDb.Hsapiens.v86, columns=c("tx_id", "gene_name"))
@@ -154,8 +167,6 @@ Txi_gene <- tximport(paste0("kallisto/",path),
 ### Filtering & normalisation
 
 ```{r dataWrangling}
-nocpm_threshold<-9 #IMPORTANT PARAMETRE: minimum number of samples with CPM > 1
-
 sampleLabels <- targets$sample
 myDGEList <- DGEList(Txi_gene$counts)
 log2.cpm <- cpm(myDGEList, log=TRUE)
@@ -163,7 +174,7 @@ log2.cpm <- cpm(myDGEList, log=TRUE)
 log2.cpm.df <- as_tibble(log2.cpm, rownames = "geneID")
 colnames(log2.cpm.df) <- c("geneID", sampleLabels)
 log2.cpm.df.pivot <- pivot_longer(log2.cpm.df, 
-                                  cols = ERR978118:ERR978195,         
+                                  cols = head(targets$sample, 1):tail(targets$sample, 1),         
                                   names_to = "samples", 
                                   values_to = "expression") 
 p1 <- ggplot(log2.cpm.df.pivot) +
@@ -190,7 +201,7 @@ log2.cpm.filtered <- cpm(myDGEList.filtered, log=TRUE)
 log2.cpm.filtered.df <- as_tibble(log2.cpm.filtered, rownames = "geneID")
 colnames(log2.cpm.filtered.df) <- c("geneID", sampleLabels)
 log2.cpm.filtered.df.pivot <- pivot_longer(log2.cpm.filtered.df, 
-                                           cols = ERR978118:ERR978195, 
+                                           cols = head(targets$sample, 1):tail(targets$sample, 1), 
                                            names_to = "samples", 
                                            values_to = "expression") 
 
@@ -215,7 +226,7 @@ log2.cpm.filtered.norm <- cpm(myDGEList.filtered.norm, log=TRUE)
 log2.cpm.filtered.norm.df <- as_tibble(log2.cpm.filtered.norm, rownames = "geneID")
 colnames(log2.cpm.filtered.norm.df) <- c("geneID", sampleLabels)
 log2.cpm.filtered.norm.df.pivot <- pivot_longer(log2.cpm.filtered.norm.df, 
-                                                cols = ERR978118:ERR978195,
+                                                cols = head(targets$sample, 1):tail(targets$sample, 1),
                                                 names_to = "samples", 
                                                 values_to = "expression") 
 
@@ -261,7 +272,7 @@ log2.cpm <- cpm(myDGEList, log=TRUE)
 log2.cpm.df <- as_tibble(log2.cpm, rownames = "geneID")
 colnames(log2.cpm.df) <- c("geneID", sampleLabels)
 log2.cpm.df.pivot <- pivot_longer(log2.cpm.df, 
-                                  cols = ERR978118:ERR978195,         
+                                  cols = head(targets$sample, 1):tail(targets$sample, 1),         
                                   names_to = "samples", 
                                   values_to = "expression") 
 
@@ -273,7 +284,7 @@ log2.cpm.filtered <- cpm(myDGEList.filtered, log=TRUE)
 log2.cpm.filtered.df <- as_tibble(log2.cpm.filtered, rownames = "geneID")
 colnames(log2.cpm.filtered.df) <- c("geneID", sampleLabels)
 log2.cpm.filtered.df.pivot <- pivot_longer(log2.cpm.filtered.df, 
-                                           cols = ERR978118:ERR978195, 
+                                           cols = head(targets$sample, 1):tail(targets$sample, 1), 
                                            names_to = "samples", 
                                            values_to = "expression") 
 
@@ -283,7 +294,7 @@ log2.cpm.filtered.norm <- cpm(myDGEList.filtered.norm, log=TRUE)
 log2.cpm.filtered.norm.df <- as_tibble(log2.cpm.filtered.norm, rownames = "geneID")
 colnames(log2.cpm.filtered.norm.df) <- c("geneID", sampleLabels)
 log2.cpm.filtered.norm.df.pivot <- pivot_longer(log2.cpm.filtered.norm.df, 
-                                                cols = ERR978118:ERR978195,
+                                                cols = head(targets$sample, 1):tail(targets$sample, 1),
                                                 names_to = "samples", 
                                                 values_to = "expression") 
 
@@ -345,10 +356,10 @@ write.csv(mydata.df, "report/tables/table_1_filtered_normalised.csv", row.names 
 scatter <- ggplot(mydata.df) + 
   aes(x=adh.AVG, y=sph.AVG, color=abs(LogFC)) +
   geom_point(shape=16, size=1) +
-  ggtitle("sph vs. adh") +
+  ggtitle(paste0(condition1," vs. ", condition_control)) +
   theme_bw()
-save_plot("report/plots/multivariate_analysis/scatter.svg",scatter, base_width = 10, base_height = 10)
-save_plot("report/plots/multivariate_analysis/scatter.png",scatter, base_width = 10, base_height = 10)
+save_plot("report/plots/multivariate_analysis/scatter.svg",scatter, base_width = 7, base_height = 5)
+save_plot("report/plots/multivariate_analysis/scatter.png",scatter, base_width = 7, base_height = 5)
 # only in html ggplotly(scatter)
 scatter
 ```
@@ -372,8 +383,8 @@ The **Table 1** includes expression data for `r nrow(myDGEList.filtered)` genes.
 ## PCA plot
 
 ```{r  multivariate part 2 (PCA plot), warning=FALSE, message=FALSE, fig.cap="A) Principal Component Analysis plot coloured by condition. The 95% confidence interval is shown. B) Small Multiples Plot showing the loadings, or contribution, of sample gene to the first 4 principal components."}
-media <- targets$media
-media <- factor(media)
+condition <- targets$condition
+condition <- factor(condition)
 rep <- targets$replicate
 rep <- factor(rep)
 
@@ -383,15 +394,15 @@ pc.per<-round(pc.var/sum(pc.var)*100, 1)
 pca.res.df <- pca.res$x[,1:4] %>% 
   as_tibble() %>%
   add_column(sample = sampleLabels,
-             group = media)
+             group = condition)
 
 pca.plot_media <- ggplot(pca.res.df) +
-  aes(x=PC1, y=PC2, label=sampleLabels, color = media) +
+  aes(x=PC1, y=PC2, label=sampleLabels, color = condition) +
   geom_point(size=4) +
   stat_ellipse() +
   xlab(paste0("PC1 (",pc.per[1],"%",")")) + 
   ylab(paste0("PC2 (",pc.per[2],"%",")")) +
-  labs(title="PCA plot coloured by Media",
+  labs(title="PCA plot coloured by Condition",
        caption=paste0("produced on ", Sys.time())) +
   coord_fixed() +
   theme_bw()
@@ -439,11 +450,11 @@ all_pca
 
 ## Volcano plot
 
-An **important** note: all the contrasts, design matrix and differential expression analysis are made according to this formula ***(media:sph - media: adh)***. This means that a *logfold change* > 0 shows that the first condition is upregulated, whereas a *logfold change* < 0 shows downregulation.
+An **important** note: all the contrasts, design matrix and differential expression analysis are made according to this formula ***(`r condition1` - `r condition_control`)***. This means that a *logfold change* > 0 shows that the first condition is upregulated, whereas a *logfold change* < 0 shows downregulation.
 
 ```{r diffGenes volcano plot, warning=FALSE, fig.cap="Volcano plot of differencial gene expression.The lines delimit the 2 log-fold change and 0.01 adjusted p-value (FDR) thresholds."}
-design <- model.matrix(~0 + media)
-colnames(design) <- levels(media)
+design <- model.matrix(~0 + condition)
+colnames(design) <- levels(condition)
 
 v.DEGList.filtered.norm <- voom(myDGEList.filtered.norm, design, plot = FALSE)
 fit <- lmFit(v.DEGList.filtered.norm, design)
@@ -468,7 +479,7 @@ vplot <- ggplot(myTopHits.df) +
   #annotate("rect", xmin = 1, xmax = 12, ymin = -log10(0.01), ymax = 7.5, alpha=.2, fill="#BE684D") +
   #annotate("rect", xmin = -1, xmax = -12, ymin = -log10(0.01), ymax = 7.5, alpha=.2, fill="#2C467A") +
   labs(title="Volcano plot",
-       subtitle = "Cancer Stem Cells enriched Genes",
+       subtitle = explanation,
        caption=paste0("produced on ", Sys.time())) +
   scale_x_continuous(n.breaks = 8)+
   theme_bw()
@@ -499,7 +510,7 @@ write.csv(diffGenes.df, "report/tables/table_2_diffGenes.csv", row.names = FALSE
 ```{r table 2 only html, eval=FALSE}
 datatable(diffGenes.df, 
           extensions = c('KeyTable', "FixedHeader"), 
-          caption = 'Table 2: DEGs after Cancer Stem Cells Enrichment',
+          caption = paste0('Table 2: DEGs ', explanation),
           options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100"))) %>%
   formatRound(columns=c(2:ncol(diffGenes.df)), digits=2)
 ```
@@ -514,7 +525,7 @@ All credits to:
 
 ```{r Isoform Switch Analyzer, message=FALSE, warning=F, results='hide'}
 targets.mod <- targets %>%
-  dplyr::rename(sampleID = sample, condition = media) %>%
+  dplyr::rename(sampleID = sample, condition = condition) %>%
   dplyr::select(sampleID, condition)
 
 Txi_trans <- importIsoformExpression(sampleVector = paste0("kallisto/",path))
@@ -581,8 +592,8 @@ datatable(top_switches[,-1],
 switchPlot(
   mySwitchList,
   gene=top_switches$gene_id[1],
-  condition1 = 'adh',
-  condition2 = 'sph',
+  condition1 = condition_control,
+  condition2 = condition1,
   localTheme = theme_bw())
 ```
 
@@ -739,7 +750,7 @@ dev.off()
 moduleSymbols <- tibble(geneID = rev(hrsub_up$labels[hrsub_up$order]))
 moduleData <- diffGenes[moduleSymbols$geneID,]
 moduleData.df <- as_tibble(moduleData, rownames = "geneSymbol", .name_repair = "unique")
-write_csv(moduleData.df,"report/tables/table4_module_upRegulatedInSph.csv")
+write_csv(moduleData.df,paste0("report/tables/table4_module_upRegulatedIn",condition1,".csv"))
 ```
 
 
@@ -753,7 +764,7 @@ heatmaply(myModule_up,
           RowSideColors=module.color[module.assign%in%modulePick],
           showticklabels=c(TRUE,FALSE),
           scale='row',
-          main ="Heatmap of UpRegulated Genes in Sph")
+          main =paste0("Heatmap of UpRegulated Genes in ", condition1))
 
 ```
 
@@ -785,7 +796,7 @@ dev.off()
 moduleSymbols <- tibble(geneID = rev(hrsub_down$labels[hrsub_down$order]))
 moduleData <- diffGenes[moduleSymbols$geneID,]
 moduleData.df <- as_tibble(moduleData, rownames = "geneSymbol", .name_repair = "unique")
-write_csv(moduleData.df,"report/tables/table_5module_downRegulatedInSph.csv")
+write_csv(moduleData.df,paste0("report/tables/table5_module_DownRegulatedIn",condition1,".csv"))
 ```
 
 
@@ -799,7 +810,7 @@ heatmaply(myModule_down,
           RowSideColors=module.color[module.assign%in%modulePick],
           showticklabels=c(TRUE,FALSE),
           scale='row',
-          main ="Heatmap of DownRegulated Genes in Sph")
+          main =paste0("Heatmap of DownRegulated Genes in ", condition1))
 
 ```
 ## GO enrichment
@@ -842,7 +853,7 @@ gostplot(gost.res_up, interactive = T, capped = T) #set interactive=FALSE to get
 ```{r upregulated table sorted only html, eval=FALSE}
 datatable(mytable_up_sorted, 
           extensions = c('KeyTable', "FixedHeader"), 
-          caption = 'Table 6: Functional Enrichment of Up Regulated genes in Sph',
+          caption = paste0('Table 6: Functional Enrichment of Up Regulated genes in ', condition1),
           options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100")))
 ```
 
@@ -880,7 +891,7 @@ gostplot(gost.res_down, interactive = T, capped = T) #set interactive=FALSE to g
 ```{r downregulated table sorted only html, eval=FALSE}
 datatable(mytable_down_sorted, 
           extensions = c('KeyTable', "FixedHeader"), 
-          caption = 'Table 7: Functional Enrichment of Down Regulated genes in Sph',
+          caption = paste0('Table 7: Functional Enrichment of Down Regulated genes in ', condition1),
           options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100")))
 ```
 
@@ -915,7 +926,7 @@ gseaplot2(myGSEA.res,
 
 ```{r make enrichment plots for both phenotypes, results='hide'}
 for (i in 1:15){
-  name<-paste0("report/plots/FunctionalEnrichment/GSEA/GSEAplot_SphEnriched",i,".svg")
+  name<-paste0("report/plots/FunctionalEnrichment/GSEA/GSEAplot_",condition1,"Enriched",i,".svg")
   save_plot(name, gseaplot2(myGSEA.res, 
           geneSetID = which(myGSEA.df$NES>0)[i], #can choose multiple signatures to overlay in this plot
           pvalue_table = F, #can set this to FALSE for a cleaner plot
@@ -923,7 +934,7 @@ for (i in 1:15){
 }
 
 for (i in 1:15){
-  name<-paste0("report/plots/FunctionalEnrichment/GSEA/GSEAplot_AdhEnriched",i,".svg")
+  name<-paste0("report/plots/FunctionalEnrichment/GSEA/GSEAplot_",condition_control,"Enriched",i,".svg")
   save_plot(name, gseaplot2(myGSEA.res, 
           geneSetID = which(myGSEA.df$NES<0)[i], #can choose multiple signatures to overlay in this plot
           pvalue_table = F, #can set this to FALSE for a cleaner plot
@@ -935,8 +946,8 @@ for (i in 1:15){
 
 myGSEA.df <- myGSEA.df %>%
   mutate(phenotype = case_when(
-    NES > 0 ~ "sph",
-    NES < 0 ~ "adh"))
+    NES > 0 ~ condition1,
+    NES < 0 ~ condition_control))
 myGSEA.df$NES<-abs(myGSEA.df$NES)
 write.csv(myGSEA.df, file = "report/tables/table8_functionalEnrichment.csv")
 ```
