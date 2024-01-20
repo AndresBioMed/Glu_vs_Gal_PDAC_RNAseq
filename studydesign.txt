@@ -1,4 +1,4 @@
-"sample"	"media"	"replicate"
+"sample"	"condition"	"replicate"
 "ERR978118"	"adh"	"b"
 "ERR978120"	"adh"	"b"
 "ERR978121"	"adh"	"b"
