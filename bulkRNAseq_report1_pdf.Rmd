@@ -1,5 +1,5 @@
 ---
-title: "Report:Transcriptomic effect of Glucose vs Galactose in PDAC"
+title: "Report:Transcriptomic effect of Adherent Media vs Sphere Media in PDAC"
 author: "Andrés Gordo Ortiz"
 date: "`r Sys.Date()`"
 output:
@@ -104,7 +104,7 @@ This analysis performs a fully crafted **Transcriptomics Protocol**, from read m
 
 ##### IsoformSwitchAnalyzer
 1. **common_switch_consequences.pdf**: A handy PDF summarising all isoform switching events in your data.
-2. And a Folder with all the plots from Isoform Switch-positive genes.
+2. Folder with all the plots from Isoform Switch-positive genes.
 
 ##### Plots
 Every figure is provided in *PNG* (for straightforward digital use) and *SVG* (for high quality printings and figures) formats for convenience.
@@ -113,14 +113,14 @@ Every figure is provided in *PNG* (for straightforward digital use) and *SVG* (f
 1. **Volcano Plot**: Showing the expression and statistical significance of every gene on the reads.
 
 ###### FunctionalEnrichment
-1. **Bubble Plot**: Showing the top 20 enriched terms on the *C2* collection.
-2. **Manhattan Plot**: Showing the enriched terms on Gene Ontology, from either Up Regulated genes or Down Regulated genes.
-3. **GSEA**: Gene Set Enrichment Plots from the top enriched terms on the *C2* collection. 15 of the most upregulated genes, and 15 of the most downregulated genes.
+1. **Bubble Plot C2 and H**: Showing the top 20 enriched terms on either the *C2* collection or *Halmmark* collection.
+2. **Manhattan Plot**: Showing the enriched terms on Gene Ontology, from either Up Regulated genes or Down Regulated genes in the condition `r condition1`.
+3. **GSEA**: Gene Set Enrichment Plots from the top enriched terms on the *C2* and *H* collections. 15 of the most upregulated genes, and 15 of the most downregulated genes.
 
 ###### Heatmaps
-1. **Heatmap_Full**: Heatmap of gene expression across al samples and modules.
-2. **Heatmap_Up**: Heatmap of gene expression across all samples but only the module representing the upregulated genes.
-3. **Heatmap_Down**: Heatmap of gene expression across all samples but only the module representing the downregulated genes.
+1. **Heatmap_Full**: Heatmap of gene expression across all samples and modules.
+2. **Heatmap_Up**: Heatmap of gene expression across all samples but only the module representing the upregulated genes *(overexpressed in `r condition1`)*.
+3. **Heatmap_Down**: Heatmap of gene expression across all samples but only the module representing the downregulated genes *(overexpressed in `r condition_control`)*.
 
 ###### Multivariate Analysis
 1. **PCA**: Principal Component Analysis plot, coloured by the condition to analyse.
@@ -437,8 +437,6 @@ The **Table 1** includes expression data for `r nrow(myDGEList.filtered)` genes.
 ```{r  multivariate part 2 (PCA plot), warning=FALSE, message=FALSE, fig.cap="A) Principal Component Analysis plot coloured by condition. The 95% confidence interval is shown if enough samples are analysed. B) Small Multiples Plot showing the loadings, or contribution, of sample gene to the first 4 principal components."}
 condition <- targets$condition
 condition <- factor(condition)
-rep <- targets$replicate
-rep <- factor(rep)
 
 pca.res <- prcomp(t(log2.cpm.filtered.norm), scale.=F, retx=T)
 pc.var<-pca.res$sdev^2 # sdev^2 captures these eigenvalues from the PCA result
@@ -478,8 +476,8 @@ small_multiples_plot<-ggplot(pca.pivot) +
   coord_flip()
 
 all_pca<-plot_grid(pca.plot_condition,small_multiples_plot,labels = c('A', 'B'), label_size = 12)
-save_plot("report/plots/multivariate_analysis/pca.svg",pca.plot_media, base_width = 15, base_height = 7)
-save_plot("report/plots/multivariate_analysis/pca.png",pca.plot_media, base_width = 15, base_height = 7)
+save_plot("report/plots/multivariate_analysis/pca.svg",pca.plot_condition, base_width = 15, base_height = 7)
+save_plot("report/plots/multivariate_analysis/pca.png",pca.plot_condition, base_width = 15, base_height = 7)
 save_plot("report/plots/multivariate_analysis/pca_sm.svg",small_multiples_plot, base_width = 15, base_height = 7)
 save_plot("report/plots/multivariate_analysis/pca_sm.png",small_multiples_plot, base_width = 15, base_height = 7)
 save_plot("report/plots/multivariate_analysis/all_pca.svg",all_pca, base_width = 15, base_height = 7)
@@ -1000,7 +998,6 @@ myGSEA.df_C2 <- myGSEA.df_C2 %>%
     NES > 0 ~ condition1,
     NES < 0 ~ condition_control))
 myGSEA.df_C2$NES<-abs(myGSEA.df_C2$NES)
-write.csv(myGSEA.df[,-1], file = "report/tables/table8_functionalEnrichment.csv")
 ```
 
 ```{r table of functional enrichment C2 html only, eval=FALSE}
