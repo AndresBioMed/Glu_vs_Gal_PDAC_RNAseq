@@ -21,6 +21,7 @@ output:
 ```{r setup, include=FALSE}
 library(rmarkdown)
 library(tinytex)
+library(openxlsx)
 library(readxl)
 library(knitr)
 library(beepr)
@@ -58,6 +59,8 @@ dir.create("report/plots/diff_genes", showWarnings = FALSE, recursive = TRUE)
 dir.create("report/plots/heatmaps", showWarnings = FALSE, recursive = TRUE)
 dir.create("report/plots/FunctionalEnrichment", showWarnings = FALSE, recursive = TRUE)
 dir.create("report/plots/FunctionalEnrichment/GSEA", showWarnings = FALSE, recursive = TRUE)
+dir.create("report/plots/FunctionalEnrichment/GSEA/H", showWarnings = FALSE, recursive = TRUE)
+dir.create("report/plots/FunctionalEnrichment/GSEA/C2", showWarnings = FALSE, recursive = TRUE)
 dir.create("report/tables", showWarnings = FALSE, recursive = TRUE)
 dir.create("report/IsoformSwitchAnalyzer", showWarnings = FALSE, recursive = TRUE)
 knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
@@ -75,6 +78,7 @@ condition_control<-"Adherent"
 explanation<- "Cancer Stem Cell enriched genes"
 discarded_samples<-c("ERR978114","ERR978122","ERR978189","ERR978196")
 nocpm_threshold<-9 #IMPORTANT PARAMETRE: minimum number of samples with CPM > 1
+species<-"Homo sapiens"
 
 ```
 
@@ -140,6 +144,7 @@ Every figure is provided in *PNG* (for straightforward digital use) and *SVG* (f
 6. **`r paste0("table5_module_downRegulatedIn", condition1,".csv")`**: Table of genes which passed the threshold belonging to to the downregulated module, in form of counts per million. These are the genes downregulated in `r condition1`.
 7. **table6_GeneOntology_upRegulated.csv**: Taking the genes from *Table 4* to the *Gene Ontology* database, the following table of enriched pathways and routes was obtained.
 8. **table7_GeneOntology_downRegulated.csv**: Taking the genes from *Table 5* to the *Gene Ontology* database, the following table of enriched pathways and routes was obtained.
+9. **table8_functionalEnrichment.xlsx**: Taking the log-fold change values from *Table 1* to the *C2* and *Hallmark* databases, the following table of enriched pathways and routes was obtained.
 
 ## Alignment Protocol Used
 
@@ -933,10 +938,11 @@ datatable(mytable_down_sorted,
 ```
 
 ## GSEA
-The 34550 gene sets in the Human Molecular Signatures Database **(MSigDB)** are divided into 9 major collections, and several subcollections. In this analysis, we will use the **C2** collection, which contains gene sets that represent canonical pathways, gene ontology, and other gene sets derived from knowledge in the literature. The top 15 genes set for each conditions will have their own *Gene Set Enrichment Plot*. The table will contain all the results for each gene set. A sample plot is shown below.
+The 34550 gene sets in the Human Molecular Signatures Database **(MSigDB)** are divided into 9 major collections, and several subcollections. In this analysis, we will use the **C2** (Curated Genes) and **H** (Hallmark genes) collections, which contains gene sets that represent canonical pathways, gene ontology, and other gene sets derived from knowledge in the literature. The top 15 genes set for each conditions and collection will have their own *Gene Set Enrichment Plot*. The table will contain all the results for each gene set. A sample plot is shown below.
 
-```{r step 7 - functionalEnrichment part 3 (GSEA table)}
-hs_gsea_c2 <- msigdbr(species = "Homo sapiens",
+### C2 Collection
+```{r step 7 - functionalEnrichment C2 (GSEA table)}
+hs_gsea_C2 <- msigdbr(species = species,
                       category = "C2") %>% #  msigdb collection of interest
   dplyr::select(gs_name, gene_symbol)
 
@@ -948,71 +954,162 @@ names(mydata.gsea) <- as.character(mydata.df.sub$geneID)
 mydata.gsea <- sort(mydata.gsea, decreasing = TRUE)
 
 # run GSEA using the 'GSEA' function from clusterProfiler
-myGSEA.res <- GSEA(mydata.gsea, TERM2GENE=hs_gsea_c2, verbose=FALSE)
-myGSEA.df <- as_tibble(myGSEA.res@result)
+myGSEA.res_C2 <- GSEA(mydata.gsea, TERM2GENE=hs_gsea_C2, verbose=FALSE)
+myGSEA.df_C2 <- as_tibble(myGSEA.res_C2@result)
 
 ```
 
 
-```{r step 7 - functionalEnrichment part 4 (enrich plot), fig.cap="Sample of a Gene Set Enrichment Plot"}
-gseaplot2(myGSEA.res, 
+```{r step 7 - functionalEnrichment C2 (enrich plot), fig.cap="Sample of a Gene Set Enrichment Plot from the C2 Collection"}
+gseaplot2(myGSEA.res_C2, 
           geneSetID = 1, #can choose multiple signatures to overlay in this plot
           pvalue_table = F, #can set this to FALSE for a cleaner plot
-          title = myGSEA.res$Description[1]) #can also turn off this title
+          title = myGSEA.res_C2$Description[1]) #can also turn off this title
 ```
 
-```{r make enrichment plots for both phenotypes, results='hide'}
-for (i in 1:15){
-  name<-paste0("report/plots/FunctionalEnrichment/GSEA/GSEAplot_",condition1,"Enriched",i,".svg")
-  save_plot(name, gseaplot2(myGSEA.res, 
-          geneSetID = which(myGSEA.df$NES>0)[i], #can choose multiple signatures to overlay in this plot
+```{r make enrichment plots for both phenotypes C2, results='hide'}
+subset_indices <- which(myGSEA.df_C2$NES > 0)
+
+# Check the length of the subset
+subset_length <- length(subset_indices)
+
+# Set the number of iterations based on the length
+iterations <- ifelse(subset_length < 15, subset_length, 15)
+
+for (i in 1:iterations){
+  name<-paste0("report/plots/FunctionalEnrichment/GSEA/C2/GSEAplot_C2_",condition1,"Enriched",i,".svg")
+  save_plot(name, gseaplot2(myGSEA.res_C2, 
+          geneSetID = which(myGSEA.df_C2$NES>0)[i], #can choose multiple signatures to overlay in this plot
           pvalue_table = F, #can set this to FALSE for a cleaner plot
-          title = myGSEA.res[myGSEA.df$NES>0,]$Description[i]))
+          title = myGSEA.res_C2[myGSEA.df_C2$NES>0,]$Description[i]))
 }
 
-for (i in 1:15){
-  name<-paste0("report/plots/FunctionalEnrichment/GSEA/GSEAplot_",condition_control,"Enriched",i,".svg")
-  save_plot(name, gseaplot2(myGSEA.res, 
-          geneSetID = which(myGSEA.df$NES<0)[i], #can choose multiple signatures to overlay in this plot
+for (i in 1:iterations){
+  name<-paste0("report/plots/FunctionalEnrichment/GSEA/C2/GSEAplot_C2_",condition_control,"Enriched",i,".svg")
+  save_plot(name, gseaplot2(myGSEA.res_C2, 
+          geneSetID = which(myGSEA.df_C2$NES<0)[i], #can choose multiple signatures to overlay in this plot
           pvalue_table = F, #can set this to FALSE for a cleaner plot
-          title = myGSEA.res[myGSEA.df$NES<0,]$Description[i]))
+          title = myGSEA.res_C2[myGSEA.df_C2$NES<0,]$Description[i]))
 }
 
 
 # add a variable to this result that matches enrichment direction with phenotype
 
-myGSEA.df <- myGSEA.df %>%
+myGSEA.df_C2 <- myGSEA.df_C2 %>%
   mutate(phenotype = case_when(
     NES > 0 ~ condition1,
     NES < 0 ~ condition_control))
-myGSEA.df$NES<-abs(myGSEA.df$NES)
+myGSEA.df_C2$NES<-abs(myGSEA.df_C2$NES)
 write.csv(myGSEA.df[,-1], file = "report/tables/table8_functionalEnrichment.csv")
 ```
 
-```{r table of functional enrichment html only, eval=FALSE}
-datatable(myGSEA.df, 
+```{r table of functional enrichment C2 html only, eval=FALSE}
+datatable(myGSEA.df_C2, 
           extensions = c('KeyTable', "FixedHeader"), 
-          caption = "Table 8: Enrichment plots for both phenotypes",
+          caption = "Table 8.1: Enrichment plots for both phenotypes in C2 Collection",
+          options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100")))
+```
+
+### Hallmark Collection
+```{r step 7 - functionalEnrichment H (GSEA table)}
+hs_gsea_H <- msigdbr(species = species,
+                      category = "H") %>% #  msigdb collection of interest
+  dplyr::select(gs_name, gene_symbol)
+
+
+# run GSEA using the 'GSEA' function from clusterProfiler
+myGSEA.res_H <- GSEA(mydata.gsea, TERM2GENE=hs_gsea_H, verbose=FALSE)
+myGSEA.df_H <- as_tibble(myGSEA.res_H@result)
+
+```
+
+
+```{r step 7 - functionalEnrichment H (enrich plot), fig.cap="Sample of a Gene Set Enrichment Plot from the Hallmark Collection"}
+gseaplot2(myGSEA.res_H, 
+          geneSetID = 1, #can choose multiple signatures to overlay in this plot
+          pvalue_table = F, #can set this to FALSE for a cleaner plot
+          title = myGSEA.res_H$Description[1]) #can also turn off this title
+```
+
+```{r make enrichment plots for both phenotypes H, results='hide'}
+subset_indices <- which(myGSEA.df_H$NES > 0)
+
+# Check the length of the subset
+subset_length <- length(subset_indices)
+
+# Set the number of iterations based on the length
+iterations <- ifelse(subset_length < 15, subset_length, 15)
+
+for (i in 1:iterations){
+  name<-paste0("report/plots/FunctionalEnrichment/GSEA/H/GSEAplot_H_",condition1,"Enriched",i,".svg")
+  save_plot(name, gseaplot2(myGSEA.res_H, 
+          geneSetID = which(myGSEA.df_H$NES>0)[i], #can choose multiple signatures to overlay in this plot
+          pvalue_table = F, #can set this to FALSE for a cleaner plot
+          title = myGSEA.res_H[myGSEA.df_H$NES>0,]$Description[i]))
+}
+
+for (i in 1:iterations){
+  name<-paste0("report/plots/FunctionalEnrichment/GSEA/H/GSEAplot_H_",condition_control,"Enriched",i,".svg")
+  save_plot(name, gseaplot2(myGSEA.res_H, 
+          geneSetID = which(myGSEA.df_H$NES<0)[i], #can choose multiple signatures to overlay in this plot
+          pvalue_table = F, #can set this to FALSE for a cleaner plot
+          title = myGSEA.res_H[myGSEA.df_H$NES<0,]$Description[i]))
+}
+
+
+# add a variable to this result that matches enrichment direction with phenotype
+
+myGSEA.df_H <- myGSEA.df_H %>%
+  mutate(phenotype = case_when(
+    NES > 0 ~ condition1,
+    NES < 0 ~ condition_control))
+myGSEA.df_H$NES<-abs(myGSEA.df_H$NES)
+
+
+dataset_names <- list("Hallmark Collection" = myGSEA.df_H, "C2 Collection" = myGSEA.df_C2)
+write.xlsx(dataset_names, file = 'report/tables/table8_functionalEnrichment.xlsx')
+
+```
+
+```{r table of functional enrichment H html only, eval=FALSE}
+datatable(myGSEA.df_H, 
+          extensions = c('KeyTable', "FixedHeader"), 
+          caption = "Table 8.2: Enrichment plots for both phenotypes in H Collection",
           options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100")))
 ```
 
 ### Bubble Plot
 Finally, a *Bubble Plot* is produced for the top 20 gene sets. The size of the bubble is proportional to the number of genes in the gene set, the color is proportional to the **NES**, and the alpha is proportional to the *-log10(p.adjust)*. The plot is shown below. **NES** means normalized enrichment score, and it is the primary statistic for ranking genes in a GSEA analysis. It represents the degree to which a gene set is overrepresented at the top or bottom of a ranked list of genes. The score is normalized to account for differences in gene set size and in correlations between gene set members and the expression dataset. The **NES** score can be either >0, which means is enriched in the *`r condition1`* condition, or <0, which means it is enriched in the *`r condition_control`* condition. The table provided shows the absolute score beacause it has already been classified in one the two conditions.
 
-```{r functionalEnrichment part 5 (bubble plot), fig.align='left', fig.cap="Bubble plot of the top 20 gene sets within the C2 Collection"}
+```{r functionalEnrichment C2 (bubble plot), fig.align='left', fig.cap="Bubble plot of the top 20 gene sets within the C2 Collection"}
 
-top <- sort(abs(myGSEA.df$NES), index.return=TRUE, decreasing=TRUE)
+top <- sort(abs(myGSEA.df_C2$NES), index.return=TRUE, decreasing=TRUE)
 # create 'bubble plot' to summarize y signatures across x phenotypes
-bubbleplot<-ggplot(myGSEA.df[top$ix[1:20],], aes(x=phenotype, y=ID)) + 
+bubbleplot_C2<-ggplot(myGSEA.df_C2[top$ix[1:20],], aes(x=phenotype, y=ID)) + 
   geom_point(aes(size=setSize, color = NES, alpha=-log10(p.adjust))) +
   scale_color_gradient(low="blue", high="red") +
   theme_bw() +
   theme(legend.position="bottom") +
   labs(x = NULL, y = NULL)
 
-save_plot("report/plots/FunctionalEnrichment/bubbleplotEnichment.svg", bubbleplot)
-save_plot("report/plots/FunctionalEnrichment/bubbleplotEnichment.png", bubbleplot)
-bubbleplot
+save_plot("report/plots/FunctionalEnrichment/bubbleplotEnrichment_C2.svg", bubbleplot_C2)
+save_plot("report/plots/FunctionalEnrichment/bubbleplotEnrichment_C2.png", bubbleplot_C2)
+bubbleplot_C2
+```
+```{r functionalEnrichment H (bubble plot), fig.align='left', fig.cap="Bubble plot of the top 20 gene sets within the H Collection"}
+
+top <- sort(abs(myGSEA.df_H$NES), index.return=TRUE, decreasing=TRUE)
+# create 'bubble plot' to summarize y signatures across x phenotypes
+bubbleplot_H<-ggplot(myGSEA.df_H[top$ix[1:20],], aes(x=phenotype, y=ID)) + 
+  geom_point(aes(size=setSize, color = NES, alpha=-log10(p.adjust))) +
+  scale_color_gradient(low="blue", high="red") +
+  theme_bw() +
+  theme(legend.position="bottom") +
+  labs(x = NULL, y = NULL)
+
+save_plot("report/plots/FunctionalEnrichment/bubbleplotEnrichment_H.svg", bubbleplot_H)
+save_plot("report/plots/FunctionalEnrichment/bubbleplotEnrichment_H.png", bubbleplot_H)
+bubbleplot_H
 ```
 
 ------------------------------------------------------------------------
