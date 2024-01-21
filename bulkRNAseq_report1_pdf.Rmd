@@ -65,7 +65,7 @@ knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
 
 ```{r settings}
 # Change title
-# Change and adapt lines 343-348, 355, 459
+# Change and adapt lines 343-348, 355, 417, 459
 # Change line 92, data source
 # Check the modules are ok on the heatmaps
 # Add and change the proper study design, keep it standard
@@ -97,6 +97,49 @@ This analysis performs a fully crafted **Transcriptomics Protocol**, from read m
 3. **log2_cpm_filtered_norm.csv**: Excel file of the Counts per million of all genes across samples, filtered, normalised.
 
 4. **pca_results.csv**: Excel file with the results and loadings of the PCA analysis.
+
+##### IsoformSwitchAnalyzer
+1. **common_switch_consequences.pdf**: A handy PDF summarising all isoform switching events in your data.
+2. And a Folder with all the plots from Isoform Switch-positive genes.
+
+##### Plots
+Every figure is provided in *PNG* (for straightforward digital use) and *SVG* (for high quality printings and figures) formats for convenience.
+
+###### diff_genes
+1. **Volcano Plot**: Showing the expression and statistical significance of every gene on the reads.
+
+###### FunctionalEnrichment
+1. **Bubble Plot**: Showing the top 20 enriched terms on the *C2* collection.
+2. **Manhattan Plot**: Showing the enriched terms on Gene Ontology, from either Up Regulated genes or Down Regulated genes.
+3. **GSEA**: Gene Set Enrichment Plots from the top enriched terms on the *C2* collection. 15 of the most upregulated genes, and 15 of the most downregulated genes.
+
+###### Heatmaps
+1. **Heatmap_Full**: Heatmap of gene expression across al samples and modules.
+2. **Heatmap_Up**: Heatmap of gene expression across all samples but only the module representing the upregulated genes.
+3. **Heatmap_Down**: Heatmap of gene expression across all samples but only the module representing the downregulated genes.
+
+###### Multivariate Analysis
+1. **PCA**: Principal Component Analysis plot, coloured by the condition to analyse.
+2. **PCA SM**: Small Multiples Plot representing the *loadings*, or relevance, of each principal component for every sample. Useful to draw conclusions about possible other variables influencing the variability found.
+3. **All PCA**: Figure composed by the two previous plots.
+4. **Scatter**: Scatter or dot plot, showing the average expression of each gene between groups.
+
+###### Quality of Reads
+1. **log2_cpm_nonfilt_nonnorm**: Counts per million violin plot, without filtering or normalisation.
+2. **log2_cpm_filt_nonnorm**: Counts per million violin plot, after filtering but without normalisation.
+3. **log2_cpm_filt_norm**: Counts per million violin plot, after filtering and normalisation.
+4. **log2_cpm_filt_norm_fastqc_ok**: Definitive counts per million violin plot, after filtering and normalisation, without low quality samples according to fastQC.
+5. **allqualityplots**: Figure composed by the previous plots.
+
+##### Tables
+1. **differentialexpression_results.csv**: Complete table of the results of the differential expression analysis. All genes mapped to the reference genome with more than 1 count per million are analysed. 
+2. **table_1_filtered_normalised.csv**: Table of gene expression in form of counts per million, filtered and normalised. This table can be used for whatever other downstream analysis needed.
+3. **table_2_diffGenes.csv**: Table of genes which passed the thresholf of FDR>=0.01 and log-fold change >= 2, in form of counts per million, filtered and normalised.
+4. **table3_IsoformSwitchResults.csv**: Table of all Isoform Switches or changes in Usage found between conditions.
+5. **`r paste0("table4_module_UpRegulatedIn", condition1,".csv")`**: Table of genes which passed the threshold belonging to to the upregulated module, in form of counts per million. These are the genes upregulated in `r condition1`.
+6. **`r paste0("table5_module_downRegulatedIn", condition1,".csv")`**: Table of genes which passed the threshold belonging to to the downregulated module, in form of counts per million. These are the genes downregulated in `r condition1`.
+7. **table6_GeneOntology_upRegulated.csv**: Taking the genes from *Table 4* to the *Gene Ontology* database, the following table of enriched pathways and routes was obtained.
+8. **table7_GeneOntology_downRegulated.csv**: Taking the genes from *Table 5* to the *Gene Ontology* database, the following table of enriched pathways and routes was obtained.
 
 ## Alignment Protocol Used
 
@@ -462,7 +505,7 @@ myTopHits <- topTable(ebFit, adjust ="BH", coef=1, number=40000, sort.by="logFC"
 myTopHits.df <- myTopHits %>%
   as_tibble(rownames = "geneID")
 
-write.csv(myTopHits.df, "report/tables/statistics_results.csv", row.names = FALSE)
+write.csv(myTopHits.df, "report/tables/differentialexpression_results.csv", row.names = FALSE)
 
 vplot <- ggplot(myTopHits.df) +
   aes(y=-log10(adj.P.Val), x=logFC, text = paste("Symbol:", geneID)) +
@@ -561,7 +604,7 @@ top_switches<-extractTopSwitches(
   mySwitchList,
   filterForConsequences = TRUE, 
   sortByQvals = TRUE)
-write.csv(top_switches, "report/tables/table3_IsoformSwitchResults")
+write.csv(top_switches, "report/tables/table3_IsoformSwitchResults.csv")
 
 ```
 
@@ -943,7 +986,7 @@ myGSEA.df <- myGSEA.df %>%
     NES > 0 ~ condition1,
     NES < 0 ~ condition_control))
 myGSEA.df$NES<-abs(myGSEA.df$NES)
-write.csv(myGSEA.df, file = "report/tables/table8_functionalEnrichment.csv")
+write.csv(myGSEA.df[,-1], file = "report/tables/table8_functionalEnrichment.csv")
 ```
 
 ```{r table of functional enrichment html only, eval=FALSE}
@@ -953,8 +996,8 @@ datatable(myGSEA.df,
           options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100")))
 ```
 
-
-Finnally, a *Bubble Plot* is produced for the top 20 gene sets. The size of the bubble is proportional to the number of genes in the gene set, the color is proportional to the **NES**, and the alpha is proportional to the *-log10(p.adjust)*. The plot is shown below. **NES** means normalized enrichment score, and it is the primary statistic for ranking genes in a GSEA analysis. It represents the degree to which a gene set is overrepresented at the top or bottom of a ranked list of genes. The score is normalized to account for differences in gene set size and in correlations between gene set members and the expression dataset. The **NES** score can be either >0, which means is enriched in the *`r condition1`* condition, or <0, which means it is enriched in the *`r condition_control`* condition. The table provided shows the absolute score beacause it has already been classified in one the two conditions.
+### Bubble Plot
+Finally, a *Bubble Plot* is produced for the top 20 gene sets. The size of the bubble is proportional to the number of genes in the gene set, the color is proportional to the **NES**, and the alpha is proportional to the *-log10(p.adjust)*. The plot is shown below. **NES** means normalized enrichment score, and it is the primary statistic for ranking genes in a GSEA analysis. It represents the degree to which a gene set is overrepresented at the top or bottom of a ranked list of genes. The score is normalized to account for differences in gene set size and in correlations between gene set members and the expression dataset. The **NES** score can be either >0, which means is enriched in the *`r condition1`* condition, or <0, which means it is enriched in the *`r condition_control`* condition. The table provided shows the absolute score beacause it has already been classified in one the two conditions.
 
 ```{r functionalEnrichment part 5 (bubble plot), fig.align='left', fig.cap="Bubble plot of the top 20 gene sets within the C2 Collection"}
 
