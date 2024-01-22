@@ -113,8 +113,8 @@ Every figure is provided in *PNG* (for straightforward digital use) and *SVG* (f
 ###### Diff_Genes
 1. **Volcano Plot**: Showing the expression and statistical significance of every gene on the reads.
 
-###### FunctionalEnrichment
-1. **Bubble Plot C2 and H**: Showing the top 20 enriched terms on either the *C2* collection or *Halmmark* collection.
+###### Functional Enrichment
+1. **Bubble Plot C2 and H**: Showing the top 20 enriched terms on either the *C2* collection or *Hallmark* collection.
 2. **Manhattan Plot**: Showing the enriched terms on Gene Ontology, from either Up Regulated genes or Down Regulated genes in the condition `r condition1`.
 3. **GSEA**: Gene Set Enrichment Plots from the top enriched terms on the *C2* and *H* collections. 15 of the most upregulated genes, and 15 of the most downregulated genes.
 
