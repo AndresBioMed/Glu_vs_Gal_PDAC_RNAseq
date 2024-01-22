@@ -107,9 +107,10 @@ This analysis performs a fully crafted **Transcriptomics Protocol**, from read m
 2. Folder with all the plots from Isoform Switch-positive genes.
 
 ##### Plots
+
 Every figure is provided in *PNG* (for straightforward digital use) and *SVG* (for high quality printings and figures) formats for convenience.
 
-###### diff_genes
+###### Diff_Genes
 1. **Volcano Plot**: Showing the expression and statistical significance of every gene on the reads.
 
 ###### FunctionalEnrichment
