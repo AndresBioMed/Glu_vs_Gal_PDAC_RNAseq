@@ -1,3 +1,9 @@
+# Chenck ggvenn at https://bioinformatics-core-shared-training.github.io/Bulk_RNAseq_Course_Nov22/Bulk_RNAseq_Course_Base/Markdowns/11_Annotation_and_Visualisation.html
+#for your tfg!!!
+
+# Check metascape!!
+
+
 ## Subset by Pathways
 
 myGSEA.df_H[myGSEA.df_H$ID=="HALLMARK_G2M_CHECKPOINT", 11]
