@@ -516,6 +516,28 @@ ggplotly(vplot)
 
 ```
 
+# MA Plot
+```{r MA Plot, fig.cap="The plot is an MA plot colored by False Discovery Rate (FDR). It shows the relationship between average expression level (AveExpr) and log fold change (logFC) for genes or features. Points are colored blue for FDR < 0.01 and red for FDR >= 0.01, aiding in identifying significant changes."}
+ma_color <- ifelse(myTopHits.df$adj.P.Val >= 0.01, "red", "blue")
+
+# Plot
+ma_plot <- ggplot(myTopHits.df, aes(x = AveExpr, y = logFC,text = paste("Symbol:", geneID))) +
+  geom_point(color=ma_color,shape = 16, size = 3, alpha = 0.6) +  # Adjust size and transparency
+  ggtitle("MA Plot Coloured by FDR Test>=0.01") +
+  theme_minimal() +  # Change to minimal theme for cleaner appearance
+  labs(x = "Average Expression", y = "Log Fold Change", color = "FDR >= 0.01") +  # Add axis labels
+  scale_color_manual(values = c("blue", "red"), labels = c("FDR < 0.01", "FDR >= 0.01")) +  # Custom color scale
+  theme(
+    plot.title = element_text(size = 16, face = "bold", hjust = 0.5),  # Adjust title appearance
+    axis.title = element_text(size = 14),  # Adjust axis label appearance
+    legend.title = element_text(size = 12),  # Adjust legend title appearance
+    legend.text = element_text(size = 10)  # Adjust legend label appearance
+  )
+
+ggplotly(ma_plot)
+```
+
+
 ------------------------------------------------------------------------
 
 # Table of DEGs
