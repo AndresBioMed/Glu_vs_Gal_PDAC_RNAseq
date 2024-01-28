@@ -552,6 +552,10 @@ module.assign <- cutree(clustRows, k=2) #Important parametre
 module.color <- rainbow(length(unique(module.assign)), start=0.1, end=0.9) 
 module.color <- module.color[as.vector(module.assign)] 
 
+module.assign_col<-cutree(clustColumns, k=2) #Important parametre
+module.color_col <- rainbow(length(unique(module.assign_col)), start=0.1, end=0.9) 
+module.color_col <- module.color_col[as.vector(module.assign_col)]
+
 
 ```
 
@@ -564,6 +568,7 @@ heatmaply(diffGenes,
           colors = myheatcolors,
           Rowv=as.dendrogram(clustRows),
           RowSideColors=module.color,
+          ColSideColors = module.color_col,
           showticklabels=c(TRUE,FALSE),
           scale='row',
           main ="Heatmap across all samples")
