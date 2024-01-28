@@ -718,11 +718,16 @@ module.assign <- cutree(clustRows, k=2) #Important parametre
 module.color <- rainbow(length(unique(module.assign)), start=0.1, end=0.9) 
 module.color <- module.color[as.vector(module.assign)] 
 
+module.assign_col<-cutree(clustColumns, k=2) #Important parametre
+module.color_col <- rainbow(length(unique(module.assign_col)), start=0.1, end=0.9) 
+module.color_col <- module.color_col[as.vector(module.assign_col)] 
+
 svg(file = "report/plots/heatmaps/heatmap_full.svg")
 heatmap.2(diffGenes, 
           Rowv=as.dendrogram(clustRows), 
           Colv=as.dendrogram(clustColumns),
           RowSideColors=module.color,
+          ColSideColors = module.color_col,
           col=myheatcolors, scale='row', labRow=NA,
           density.info="none", trace="none",  
           cexRow=1, cexCol=1, margins=c(7,8))
@@ -733,6 +738,7 @@ heatmap.2(diffGenes,
           Rowv=as.dendrogram(clustRows), 
           Colv=as.dendrogram(clustColumns),
           RowSideColors=module.color,
+          ColSideColors = module.color_col,
           col=myheatcolors, scale='row', labRow=NA,
           density.info="none", trace="none",  
           cexRow=1, cexCol=1, margins=c(7,8))
@@ -935,6 +941,8 @@ datatable(mytable_down_sorted,
           caption = paste0('Table 7: Functional Enrichment of Down Regulated genes in ', condition1),
           options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100")))
 ```
+
+
 
 ## GSEA
 The 34550 gene sets in the Human Molecular Signatures Database **(MSigDB)** are divided into 9 major collections, and several subcollections. In this analysis, we will use the **C2** (Curated Genes) and **H** (Hallmark genes) collections, which contains gene sets that represent canonical pathways, gene ontology, and other gene sets derived from knowledge in the literature. The top 15 genes set for each conditions and collection will have their own *Gene Set Enrichment Plot*. The table will contain all the results for each gene set. A sample plot is shown below.
