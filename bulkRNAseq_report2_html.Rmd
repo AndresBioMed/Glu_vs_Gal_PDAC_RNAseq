@@ -453,15 +453,15 @@ pca.pivot <- pivot_longer(pca.res.df,
                           names_to = "PC", 
                           values_to = "loadings") 
 
-small_multiples_plot<-ggplot(pca.pivot) +
-  aes(x=sample, y=loadings, fill=sample) + 
-  geom_bar(stat="identity") +
+small_multiples_plot <- ggplot(pca.pivot) +
+  aes(x = sample, y = loadings, fill = sample) + 
+  geom_bar(stat = "identity") +
   facet_wrap(~PC) +
-  labs(title="PCA 'small multiples' plot",
-       caption=paste0("produced on ", Sys.time()))  +
+  labs(title = "PCA 'small multiples' plot",
+       caption = paste0("produced on ", Sys.time())) +
   theme_bw() +
   theme(legend.position = "none",
-        axis.text.x=element_blank()) +
+        axis.title.y = element_blank()) + 
   coord_flip()
 
 ggplotly(pca.plot_condition)

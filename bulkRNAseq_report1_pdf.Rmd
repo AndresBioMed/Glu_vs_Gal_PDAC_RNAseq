@@ -468,15 +468,17 @@ pca.pivot <- pivot_longer(pca.res.df,
                           names_to = "PC", 
                           values_to = "loadings") 
 
-small_multiples_plot<-ggplot(pca.pivot) +
-  aes(x=sample, y=loadings, fill=sample) + 
-  geom_bar(stat="identity") +
+small_multiples_plot <- ggplot(pca.pivot) +
+  aes(x = sample, y = loadings, fill = sample) + 
+  geom_bar(stat = "identity") +
   facet_wrap(~PC) +
-  labs(title="PCA 'small multiples' plot",
-       caption=paste0("produced on ", Sys.time())) +
+  labs(title = "PCA 'small multiples' plot",
+       caption = paste0("produced on ", Sys.time())) +
   theme_bw() +
-  theme(legend.position = "none") +
+  theme(legend.position = "none",
+        axis.title.y = element_blank()) + 
   coord_flip()
+
 
 all_pca<-plot_grid(pca.plot_condition,small_multiples_plot,labels = c('A', 'B'), label_size = 12)
 save_plot("report/plots/multivariate_analysis/pca.svg",pca.plot_condition, base_width = 15, base_height = 7)
@@ -552,6 +554,8 @@ ma_plot <- ggplot(myTopHits.df, aes(x = AveExpr, y = logFC)) +
     legend.title = element_text(size = 12),  # Adjust legend title appearance
     legend.text = element_text(size = 10)  # Adjust legend label appearance
   )
+save_plot("report/plots/diff_genes/ma_plot.svg",ma_plot, base_width = 15, base_height = 7)
+save_plot("report/plots/diff_genes/ma_plot.png",ma_plot, base_width = 15, base_height = 7)
 
 ma_plot
 ```
