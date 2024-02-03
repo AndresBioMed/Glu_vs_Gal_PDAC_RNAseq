@@ -119,6 +119,7 @@ Every figure is provided in *PNG* (for straightforward digital use) and *SVG* (f
 
 #### Diff_Genes
 1. **Volcano Plot**: Showing the expression and statistical significance of every gene on the reads.
+2. **MA Plot**: Showing the expression and statistical significance of every gene on the reads, but with a different representation.
 
 #### Functional Enrichment
 1. **Bubble Plot C2 and H**: Showing the top 20 enriched terms on either the *C2* collection or *Hallmark* collection.
