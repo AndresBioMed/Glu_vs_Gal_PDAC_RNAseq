@@ -56,6 +56,10 @@ echo "Enter the extension of the FASTQ files (e.g., .fq.gz or .fastq.gz):"
 read -r file_extension
 
 read -p "Do you want to use trim_galore for quality trimming before FastQC? (y/n): " use_trim
+
+if [ "$use_trim" = "y" ]; then
+    read -p "Do you want to delete the original files after trimming? (y/n): " delete_original
+fi
 # Prompt the user to choose between single-end and paired-end data
 read -p "Enter 's' for single-end data or 'p' for paired-end data: " data_type
 
@@ -112,6 +116,9 @@ if [ "$use_trim" = "y" ]; then
             echo "$base_name"
             trim_galore -o ~/"$experiment_name"/trim_galore_output -j 4 "$input_file"
             mv ~/"$experiment_name"/trim_galore_output/"$base_name"_trimmed.fq.gz ~/"$experiment_name"/trim_galore_output/"$base_name""$file_extension"
+            if [ "$delete_original" = "y" ]; then
+                rm "$input_file"
+            fi
         done
     elif [ "$data_type" = "p" ]; then
         # Paired-end data
@@ -124,6 +131,9 @@ if [ "$use_trim" = "y" ]; then
                 trim_galore --paired -o ~/"$experiment_name"/trim_galore_output -j 4 "$input_file1" "$input_file2"
                 mv ~/"$experiment_name"/trim_galore_output/"$base_name""$ext1"_val_1.fq.gz ~/"$experiment_name"/trim_galore_output/"$base_name""$ext1""$file_extension"
                 mv ~/"$experiment_name"/trim_galore_output/"$base_name""$ext2"_val_2.fq.gz ~/"$experiment_name"/trim_galore_output/"$base_name""$ext2""$file_extension"
+                if [ "$delete_original" = "y" ]; then
+                    rm "$input_file1" "$input_file2"
+                fi
 
             else
                 echo "Warning: Paired-end file for $base_name not found. Skipping..."
