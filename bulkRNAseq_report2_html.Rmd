@@ -83,8 +83,8 @@ knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
 condition1<-"Sphere"
 condition_control<-"Adherent"
 explanation<- "Cancer Stem Cell enriched genes"
-discarded_samples<-c("ERR978114","ERR978122","ERR978189","ERR978196")
-nocpm_threshold<-9 #IMPORTANT PARAMETRE: minimum number of samples with CPM > 1
+discarded_samples<-c("ERR978114","ERR978145","ERR978189","ERR978196","ERR978218","ERR978226")
+nocpm_threshold<-29 #IMPORTANT PARAMETRE: minimum number of samples with CPM > 1
 species<-"Homo sapiens"
 
 ```
@@ -196,11 +196,11 @@ Every figure is provided in *PNG* (for straightforward digital use) and *SVG* (f
 
 
 ```{r TxImport, echo=FALSE}
-targets <- read_tsv("studydesign.txt")
+targets <- read.table("studydesign.txt")
 all_samples<-targets$sample
 samples_nodepth<-targets$sample %in% discarded_samples # remove samples without enough read depth, according to fastqc.
 
-path <- file.path(targets$sample, "abundance.tsv") # set file paths to your mapped data
+path <- file.path(targets$sample, "abundance.h5") # set file paths to your mapped data
 Tx <- transcripts(EnsDb.Hsapiens.v86, columns=c("tx_id", "gene_name"))
 Tx <- as_tibble(Tx)
 Tx <- dplyr::rename(Tx, target_id = tx_id)
@@ -383,16 +383,14 @@ According to *fastQC* results, a total of `r sum(samples_nodepth)` samples were 
 
 ```{r multivariate, fig.cap="Scatter plot showing the divergence in the average expression of every gene between the two conditions"}
 mydata.df <- mutate(log2.cpm.filtered.norm.df,
-                    adh.AVG = (ERR978118+ERR978120+ERR978121+ERR978107+ERR978112+ERR978116+ERR978117+ERR978119
-)/8, 
-                    sph.AVG = (ERR978193+ERR978184+ERR978185+ERR978186+ERR978187+ERR978191+ERR978194+ERR978195
-)/8,
+                    adh.AVG = (ERR978111+ERR978113+ERR978115+ERR978116+ERR978117+ERR978118+ERR978120+ERR978121+ERR978142+ERR978144+ERR978151+ERR978107+ERR978112+ERR978143+ERR978147+ERR978148+ERR978149)/20, 
+                    sph.AVG = (ERR978190+ERR978192+ERR978195+ERR978215+ERR978219+ERR978220+ERR978222+ERR978224+ERR978193+ERR978212+ERR978217+ERR978221+ERR978223+ERR978225+ERR978183+ERR978184+ERR978185+ERR978186+ERR978187+ERR978188+ERR978191+ERR978194+ERR978213+ERR978216)/24,
                     
                     LogFC = (sph.AVG - adh.AVG)) %>% 
   mutate_if(is.numeric, round, 2)
 
 scatter <- ggplot(mydata.df) + 
-  aes(x=adh.AVG, y=sph.AVG, color=abs(LogFC)) +
+  aes(x=adh.AVG, y=sph.AVG, color=abs(LogFC), text = paste("Symbol:", geneID)) +
   geom_point(shape=16, size=1) +
   ggtitle(paste0(condition1," vs. ", condition_control)) +
   theme_bw()
@@ -485,7 +483,7 @@ colnames(design) <- levels(condition)
 
 v.DEGList.filtered.norm <- voom(myDGEList.filtered.norm, design, plot = FALSE)
 fit <- lmFit(v.DEGList.filtered.norm, design)
-contrast.matrix <- makeContrasts(treatment = sph - adh,
+contrast.matrix <- makeContrasts(treatment = Sph - Adh,
                                  levels=design)
 
 fits <- contrasts.fit(fit, contrast.matrix)
@@ -806,7 +804,8 @@ bubbleplot_C2<-ggplot(myGSEA.df_C2[top$ix[1:20],], aes(x=phenotype, y=ID)) +
   scale_color_gradient(low="blue", high="red") +
   theme_bw() +
   theme(legend.position="bottom") +
-  labs(x = NULL, y = NULL)
+  labs(x = NULL, y = NULL)+
+  scale_x_discrete(guide = guide_axis(angle = 60))
 
 
 ggplotly(bubbleplot_C2)
@@ -822,7 +821,8 @@ bubbleplot_H<-ggplot(myGSEA.df_H[top$ix[1:20],], aes(x=phenotype, y=ID)) +
   scale_color_gradient(low="blue", high="red") +
   theme_bw() +
   theme(legend.position="bottom") +
-  labs(x = NULL, y = NULL)
+  labs(x = NULL, y = NULL) +
+  scale_x_discrete(guide = guide_axis(angle = 60))
 
 
 ggplotly(bubbleplot_H)
