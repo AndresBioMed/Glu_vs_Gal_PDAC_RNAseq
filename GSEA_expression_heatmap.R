@@ -5,7 +5,7 @@
 
 
 ## Subset by Pathways
-
+library(ComplexHeatmap)
 myGSEA.df_H[myGSEA.df_H$ID=="HALLMARK_G2M_CHECKPOINT", 11]
 ### extract values from that list, deleting the "/" symbol
 geneset_list<-unlist(myGSEA.df_H[myGSEA.df_H$ID=="HALLMARK_G2M_CHECKPOINT", 11]) %>% strsplit("/")
