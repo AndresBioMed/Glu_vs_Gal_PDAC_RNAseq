@@ -1,9 +1,0 @@
-"","gene_ref","gene_id","gene_name","condition_1","condition_2","gene_switch_q_value","switchConsequencesGene","Rank"
-"1","geneComp_00004194","CYP1B1","CYP1B1","adh","sph",0.012752395291374,TRUE,1
-"2","geneComp_00004762","DNMBP","DNMBP","adh","sph",0.0232290195859806,TRUE,2
-"3","geneComp_00010700","KIAA0513","KIAA0513","adh","sph",0.0347466075587733,TRUE,3
-"4","geneComp_00016104","PURA","PURA","adh","sph",0.0347466075587733,TRUE,4
-"5","geneComp_00004092","CTU2","CTU2","adh","sph",0.0350468422632051,TRUE,5
-"6","geneComp_00023192","ZNF765","ZNF765","adh","sph",0.0390991658388275,TRUE,6
-"7","geneComp_00001656","BCAR3","BCAR3","adh","sph",0.0404424604779608,TRUE,7
-"8","geneComp_00007353","ETFDH","ETFDH","adh","sph",0.0404424604779608,TRUE,8

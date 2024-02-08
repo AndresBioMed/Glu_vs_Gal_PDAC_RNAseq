@@ -1,0 +1,11 @@
+"","gene_ref","gene_id","gene_name","condition_1","condition_2","gene_switch_q_value","switchConsequencesGene","Rank"
+"1","geneComp_00019696","RTN4","RTN4","Adh","Sph",0.000712035305563263,TRUE,1
+"2","geneComp_00014258","NBEAL1","NBEAL1","Adh","Sph",0.00115503782856496,TRUE,2
+"3","geneComp_00001721","BAX","BAX","Adh","Sph",0.0016768250709377,TRUE,3
+"4","geneComp_00002032","BRWD1","BRWD1","Adh","Sph",0.00270273163050117,TRUE,4
+"5","geneComp_00014005","MUC3A","MUC3A","Adh","Sph",0.00278111229605306,TRUE,5
+"6","geneComp_00004332","CTNNB1","CTNNB1","Adh","Sph",0.00344873664062761,TRUE,6
+"7","geneComp_00020260","SGCE","SGCE","Adh","Sph",0.00344873664062761,TRUE,7
+"8","geneComp_00015778","PARP9","PARP9","Adh","Sph",0.00442106242001353,TRUE,8
+"9","geneComp_00008343","FAM13A","FAM13A","Adh","Sph",0.00506817263795011,TRUE,9
+"10","geneComp_00013503","MORC4","MORC4","Adh","Sph",0.00506817263795011,TRUE,10
