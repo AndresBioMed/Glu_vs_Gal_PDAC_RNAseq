@@ -71,6 +71,20 @@ library(gprofiler2)
 library(clusterProfiler) 
 library(msigdbr) 
 library(enrichplot)
+library(IsoformSwitchAnalyzeR)
+dir.create("report", showWarnings = FALSE, recursive = TRUE)
+dir.create("report/data", showWarnings = FALSE, recursive = TRUE)
+dir.create("report/plots", showWarnings = FALSE, recursive = TRUE)
+dir.create("report/plots/QualityofReads", showWarnings = FALSE, recursive = TRUE)
+dir.create("report/plots/multivariate_analysis", showWarnings = FALSE, recursive = TRUE)
+dir.create("report/plots/diff_genes", showWarnings = FALSE, recursive = TRUE)
+dir.create("report/plots/heatmaps", showWarnings = FALSE, recursive = TRUE)
+dir.create("report/plots/FunctionalEnrichment", showWarnings = FALSE, recursive = TRUE)
+dir.create("report/plots/FunctionalEnrichment/GSEA", showWarnings = FALSE, recursive = TRUE)
+dir.create("report/plots/FunctionalEnrichment/GSEA/H", showWarnings = FALSE, recursive = TRUE)
+dir.create("report/plots/FunctionalEnrichment/GSEA/C2", showWarnings = FALSE, recursive = TRUE)
+dir.create("report/tables", showWarnings = FALSE, recursive = TRUE)
+dir.create("report/IsoformSwitchAnalyzer", showWarnings = FALSE, recursive = TRUE)
 knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
 ```
 
@@ -86,6 +100,9 @@ explanation<- "Cancer Stem Cell enriched genes"
 discarded_samples<-c("ERR978114","ERR978145","ERR978189","ERR978196","ERR978218","ERR978226")
 nocpm_threshold<-29 #IMPORTANT PARAMETRE: minimum number of samples with CPM > 1
 species<-"Homo sapiens"
+
+
+# In this chunk create the studydesign.txt:
 
 ```
 
@@ -300,7 +317,9 @@ p3 <- ggplot(log2.cpm.filtered.norm.df.pivot) +
   scale_x_discrete(guide = guide_axis(angle = 60))+
   theme_bw()
 
-
+write.csv(log2.cpm.df, "report/data/log2_cpm.csv", row.names = F)
+write.csv(log2.cpm.filtered.norm.df, "report/data/log2_cpm_filtered_norm.csv", row.names = F)
+write.csv(log2.cpm.filtered.df, "report/data/log2_cpm_filtered.csv", row.names = F)
 ```
 
 ```{r step 1 and 2 -filtered out samples-, fig.cap="Violin plots of log2 CPM values for each sample. A) Raw reads after mapping. B) Genes with more than 9 samples with CPM < 1 were filtered out. C) Normalisation with TMM. D) Tidy Samples with a positive FastQC Result to be used in the downstream analysis"}
@@ -367,7 +386,16 @@ p4 <- ggplot(log2.cpm.filtered.norm.df.pivot) +
   theme_bw()
 pt<-plot_grid(p1, p2, p3, p4,  labels = c('A', 'B', 'C', "D"), label_size = 12, align="hv")
 
-
+save_plot("report/plots/QualityofReads/log2_cpm_nonfilt_nonnorm.svg",p1, base_width = 15, base_height = 7)
+save_plot("report/plots/QualityofReads/log2_cpm_nonfilt_nonnorm.png",p1, base_width = 15, base_height = 7)
+save_plot("report/plots/QualityofReads/log2_cpm_filt_nonnorm.svg",p2, base_width = 15, base_height = 7)
+save_plot("report/plots/QualityofReads/log2_cpm_filt_nonnorm.png",p2, base_width = 15, base_height = 7)
+save_plot("report/plots/QualityofReads/log2_cpm_filt_norm.svg",p3, base_width = 15, base_height = 7)
+save_plot("report/plots/QualityofReads/log2_cpm_filt_norm.png",p3, base_width = 15, base_height = 7)
+save_plot("report/plots/QualityofReads/log2_cpm_filt_norm_fastqc_ok.svg",p4, base_width = 15, base_height = 7)
+save_plot("report/plots/QualityofReads/log2_cpm_filt_norm_fastqc_ok.png",p4, base_width = 15, base_height = 7)
+save_plot("report/plots/QualityofReads/allqualityplots.svg",pt, base_width = 30, base_height = 10)
+save_plot("report/plots/QualityofReads/allqualityplots.png",pt, base_width = 30, base_height = 10)
 
 pt
 ```
@@ -390,12 +418,17 @@ mydata.df <- mutate(log2.cpm.filtered.norm.df,
                     LogFC = (sph.AVG - adh.AVG)) %>% 
   mutate_if(is.numeric, round, 2)
 
+dir.create("report/tables", showWarnings = FALSE, recursive = TRUE)
+write.csv(mydata.df, "report/tables/table_1_filtered_normalised.csv", row.names = FALSE)
+
 scatter <- ggplot(mydata.df) + 
   aes(x=adh.AVG, y=sph.AVG, color=abs(LogFC), text = paste("Symbol:", geneID)) +
   geom_point(shape=16, size=1) +
   ggtitle(paste0(condition1," vs. ", condition_control)) +
   theme_bw()
 
+save_plot("report/plots/multivariate_analysis/scatter.svg",scatter, base_width = 7, base_height = 5)
+save_plot("report/plots/multivariate_analysis/scatter.png",scatter, base_width = 7, base_height = 5)
 # only in html ggplotly(scatter)
 ggplotly(scatter)
 ```
@@ -463,6 +496,15 @@ small_multiples_plot <- ggplot(pca.pivot) +
         axis.title.y = element_blank()) + 
   coord_flip()
 
+all_pca<-plot_grid(pca.plot_condition,small_multiples_plot,labels = c('A', 'B'), label_size = 12)
+save_plot("report/plots/multivariate_analysis/pca.svg",pca.plot_condition, base_width = 15, base_height = 7)
+save_plot("report/plots/multivariate_analysis/pca.png",pca.plot_condition, base_width = 15, base_height = 7)
+save_plot("report/plots/multivariate_analysis/pca_sm.svg",small_multiples_plot, base_width = 15, base_height = 7)
+save_plot("report/plots/multivariate_analysis/pca_sm.png",small_multiples_plot, base_width = 15, base_height = 7)
+save_plot("report/plots/multivariate_analysis/all_pca.svg",all_pca, base_width = 15, base_height = 7)
+save_plot("report/plots/multivariate_analysis/all_pca.png",all_pca, base_width = 15, base_height = 7)
+write.csv(pca.pivot, "report/data/pca_results.csv", row.names = FALSE)
+
 ggplotly(pca.plot_condition)
 ```
 
@@ -494,6 +536,8 @@ myTopHits <- topTable(ebFit, adjust ="BH", coef=1, number=40000, sort.by="logFC"
 myTopHits.df <- myTopHits %>%
   as_tibble(rownames = "geneID")
 
+write.csv(myTopHits.df, "report/tables/differentialexpression_results.csv", row.names = FALSE)
+
 
 vplot <- ggplot(myTopHits.df) +
   aes(y=-log10(adj.P.Val), x=logFC, text = paste("Symbol:", geneID)) +
@@ -508,6 +552,9 @@ vplot <- ggplot(myTopHits.df) +
        caption=paste0("produced on ", Sys.time())) +
   scale_x_continuous(n.breaks = 8)+
   theme_bw()
+
+save_plot("report/plots/diff_genes/volcano.svg",vplot, base_width = 15, base_height = 7)
+save_plot("report/plots/diff_genes/volcano.png",vplot, base_width = 15, base_height = 7)
 
 # Only in html ggplotly(vplot)
 ggplotly(vplot)
@@ -533,6 +580,9 @@ ma_plot <- ggplot(myTopHits.df, aes(x = AveExpr, y = logFC,text = paste("Symbol:
     legend.text = element_text(size = 10)  # Adjust legend label appearance
   )
 
+save_plot("report/plots/diff_genes/ma_plot.svg",ma_plot, base_width = 15, base_height = 7)
+save_plot("report/plots/diff_genes/ma_plot.png",ma_plot, base_width = 15, base_height = 7)
+
 ggplotly(ma_plot)
 ```
 
@@ -548,14 +598,95 @@ results <- decideTests(ebFit, method="global", adjust.method="BH", p.value=0.01,
 colnames(v.DEGList.filtered.norm$E) <- sampleLabels
 diffGenes <- v.DEGList.filtered.norm$E[results[,1] !=0,]
 diffGenes.df <- as_tibble(diffGenes, rownames = "geneID")
+
+write.csv(diffGenes.df, "report/tables/table_2_diffGenes.csv", row.names = FALSE)
+
 ```
 
 ```{r table 2 only html, eval=TRUE}
 datatable(diffGenes.df, 
           extensions = c('KeyTable', "FixedHeader"), 
           caption = paste0('Table 2: DEGs: ', explanation),
-          options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100"))) %>%
-  formatRound(columns=c(2:ncol(diffGenes.df)), digits=2)
+          options = list(keys = TRUE, 
+                         searchHighlight = TRUE, 
+                         pageLength = 10, 
+                         lengthMenu = c("10", "25", "50", "100"))) %>%
+          formatRound(columns=c(2:ncol(diffGenes.df)), digits=2)
+
+```
+
+------------------------------------------------------------------------
+
+# Isoform Switch Analyzer
+
+Transcript isoforms expression and usage change was analysed through the well-established [IsoformSwitchAnalyzeR](https://bioconductor.org/packages/release/bioc/vignettes/IsoformSwitchAnalyzeR/inst/doc/IsoformSwitchAnalyzeR.html). All differential **expressed/usage** genes will have their own *Switch Plot* and *Switch Table*. Here is the *Switch Plot* of the top 1 gene as a sample.
+All credits to:
+*Soneson et al. Differential analyses for RNA-seq: transcript-level estimates improve gene-level inferences. F1000Research 4, 1521 (2015).*
+
+```{r Isoform Switch Analyzer, message=FALSE, warning=F, results='hide'}
+targets.mod <- targets %>%
+  dplyr::rename(sampleID = sample, condition = condition) %>%
+  dplyr::select(sampleID, condition)
+
+Txi_trans <- importIsoformExpression(sampleVector = paste0("kallisto/",path))
+colnames(Txi_trans$abundance) <- c("isoform_id", sampleLabels)
+colnames(Txi_trans$counts) <- c("isoform_id", sampleLabels)
+
+# Define file paths
+gtf_file_path <- "Homo_sapiens.GRCh38.111.chr_patch_hapl_scaff.gtf.gz"
+fa_file_path <- "Homo_sapiens.GRCh38.cdna.all.fa.gz"
+
+
+
+mySwitchList <- importRdata(
+  isoformCountMatrix   = Txi_trans$counts,
+  isoformRepExpression = Txi_trans$abundance,
+  designMatrix         = targets.mod,
+  removeNonConvensionalChr = TRUE,
+  addAnnotatedORFs=TRUE,
+  fixStringTieAnnotationProblem = TRUE,
+  ignoreAfterPeriod=TRUE,
+  # the files below must be from the same ensembl release, and must match the reference release version that were originally mapped to the reads.
+  isoformExonAnnoation = "Homo_sapiens.GRCh38.111.chr_patch_hapl_scaff.gtf.gz",
+  isoformNtFasta       = "Homo_sapiens.GRCh38.cdna.all.fa.gz",
+  showProgress = TRUE)
+
+mySwitchList <- isoformSwitchAnalysisCombined(
+  switchAnalyzeRlist   = mySwitchList,
+  pathToOutput = 'report/IsoformSwitchAnalyzer')
+
+top_switches<-extractTopSwitches(
+  mySwitchList,
+  filterForConsequences = TRUE, 
+  sortByQvals = TRUE)
+write.csv(top_switches, "report/tables/table3_IsoformSwitchResults.csv")
+
+```
+
+```{r summary of Isoform Switch, eval=TRUE}
+extractSwitchSummary(mySwitchList)
+
+```
+
+```{r table 3 Isoform Switches only html}
+
+datatable(top_switches[,-1],
+          caption = 'Table 3: Top Isoform Switches',
+          extensions = c('KeyTable', "FixedHeader"), 
+          filter = 'top',
+          options = list(keys = TRUE, 
+                         searchHighlight = TRUE, 
+                         pageLength = 10, 
+                         lengthMenu = c("10", "25", "50", "100")))
+```
+
+```{r example switchplot, fig.cap="Sample of a SwitchPlot. All SwitchPlots generated can be found in their corresponding folder."}
+switchPlot(
+  mySwitchList,
+  gene=top_switches$gene_id[1],
+  condition1 = condition_control,
+  condition2 = condition1,
+  localTheme = theme_bw())
 ```
 
 ------------------------------------------------------------------------
@@ -576,6 +707,28 @@ module.color <- module.color[as.vector(module.assign)]
 module.assign_col<-cutree(clustColumns, k=2) #Important parametre
 module.color_col <- rainbow(length(unique(module.assign_col)), start=0.1, end=0.9) 
 module.color_col <- module.color_col[as.vector(module.assign_col)]
+
+svg(file = "report/plots/heatmaps/heatmap_full.svg")
+heatmap.2(diffGenes, 
+          Rowv=as.dendrogram(clustRows), 
+          Colv=as.dendrogram(clustColumns),
+          RowSideColors=module.color,
+          ColSideColors = module.color_col,
+          col=myheatcolors, scale='row', labRow=NA,
+          density.info="none", trace="none",  
+          cexRow=1, cexCol=1, margins=c(7,8))
+dev.off()
+
+png(file = "report/plots/heatmaps/heatmap_full.png")
+heatmap.2(diffGenes, 
+          Rowv=as.dendrogram(clustRows), 
+          Colv=as.dendrogram(clustColumns),
+          RowSideColors=module.color,
+          ColSideColors = module.color_col,
+          col=myheatcolors, scale='row', labRow=NA,
+          density.info="none", trace="none",  
+          cexRow=1, cexCol=1, margins=c(7,8))
+dev.off()
 
 
 ```
@@ -601,11 +754,31 @@ modulePick <- 1  #Be careful with which is which
 myModule_up <- diffGenes[names(module.assign[module.assign %in% modulePick]),] 
 hrsub_up <- hclust(as.dist(1-cor(t(myModule_up), method="pearson")), method="complete") 
 
+svg(file = "report/plots/heatmaps/heatmap_upRegulated.svg")
+heatmap.2(myModule_up, 
+          Rowv=as.dendrogram(hrsub_up), 
+          Colv=as.dendrogram(clustColumns), 
+          labRow = NA,
+          col=myheatcolors, scale="row", 
+          density.info="none", trace="none", 
+          RowSideColors=module.color[module.assign%in%modulePick], margins=c(8,20))
+dev.off()
+
+png(file = "report/plots/heatmaps/heatmap_upRegulated.png")
+heatmap.2(myModule_up, 
+          Rowv=as.dendrogram(hrsub_up), 
+          Colv=as.dendrogram(clustColumns), 
+          labRow = NA,
+          col=myheatcolors, scale="row", 
+          density.info="none", trace="none", 
+          RowSideColors=module.color[module.assign%in%modulePick], margins=c(8,20))
+dev.off()
 
 
 moduleSymbols <- tibble(geneID = rev(hrsub_up$labels[hrsub_up$order]))
 moduleData <- diffGenes[moduleSymbols$geneID,]
 moduleData.df <- as_tibble(moduleData, rownames = "geneSymbol", .name_repair = "unique")
+write_csv(moduleData.df,paste0("report/tables/table4_module_upRegulatedIn",condition1,".csv"))
 ```
 
 
@@ -628,10 +801,30 @@ modulePick <- 2
 myModule_down <- diffGenes[names(module.assign[module.assign %in% modulePick]),] 
 hrsub_down <- hclust(as.dist(1-cor(t(myModule_down), method="pearson")), method="complete") 
 
+svg(file = "report/plots/heatmaps/heatmap_downRegulated.svg")
+heatmap.2(myModule_down, 
+          Rowv=as.dendrogram(hrsub_down), 
+          Colv=as.dendrogram(clustColumns), 
+          labRow = NA,
+          col=myheatcolors, scale="row", 
+          density.info="none", trace="none", 
+          RowSideColors=module.color[module.assign%in%modulePick])
+dev.off()
+
+png(file = "report/plots/heatmaps/heatmap_downRegulated.png")
+heatmap.2(myModule_down, 
+          Rowv=as.dendrogram(hrsub_down), 
+          Colv=as.dendrogram(clustColumns), 
+          labRow = NA,
+          col=myheatcolors, scale="row", 
+          density.info="none", trace="none", 
+          RowSideColors=module.color[module.assign%in%modulePick])
+dev.off()
 
 moduleSymbols <- tibble(geneID = rev(hrsub_down$labels[hrsub_down$order]))
 moduleData <- diffGenes[moduleSymbols$geneID,]
 moduleData.df <- as_tibble(moduleData, rownames = "geneSymbol", .name_repair = "unique")
+write_csv(moduleData.df,paste0("report/tables/table5_module_DownRegulatedIn",condition1,".csv"))
 ```
 
 
@@ -665,6 +858,11 @@ mytable_up_sorted<-dplyr::arrange(gost.res_up$result,p_value)%>%
   apply(2,as.character)%>%
   as_tibble()
 
+write.csv(mytable_up_sorted, file = "report/tables/table6_GeneOntology_upRegulated.csv")
+
+save_plot("report/plots/FunctionalEnrichment/go_manhattanplotFunctionalEnrichment_Up.svg",mygostplot_up)
+save_plot("report/plots/FunctionalEnrichment/go_manhattanplotFunctionalEnrichment_Up.png",mygostplot_up)
+
 
 mygostplot_up
 ```
@@ -674,7 +872,7 @@ mygostplot_up
 ```{r upregulated table sorted only html, eval=TRUE}
 datatable(mytable_up_sorted, 
           extensions = c('KeyTable', "FixedHeader"), 
-          caption = paste0('Table 6: Functional Enrichment of Up Regulated genes in ', condition1),
+          caption = paste0('Table 4: Functional Enrichment of Up Regulated genes in ', condition1),
           options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100")))
 ```
 
@@ -690,6 +888,10 @@ mytable_down_sorted<-dplyr::arrange(gost.res_down$result,p_value)%>%
   apply(2,as.character)%>%
   as_tibble()
 
+write.csv(mytable_down_sorted, file = "report/tables/table7_GeneOntology_downRegulated.csv")
+
+save_plot("report/plots/FunctionalEnrichment/manhattanplotFunctionalEnrichment_Down.svg",mygostplot_down)
+save_plot("report/plots/FunctionalEnrichment/manhattanplotFunctionalEnrichment_Down.png",mygostplot_down)
 
 mygostplot_down
 ```
@@ -698,7 +900,7 @@ mygostplot_down
 ```{r downregulated table sorted only html, eval=TRUE}
 datatable(mytable_down_sorted, 
           extensions = c('KeyTable', "FixedHeader"), 
-          caption = paste0('Table 7: Functional Enrichment of Down Regulated genes in ', condition1),
+          caption = paste0('Table 5: Functional Enrichment of Down Regulated genes in ', condition1),
           options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100")))
 ```
 
@@ -734,6 +936,30 @@ gseaplot2(myGSEA.res_C2,
 
 
 ```{r make enrichment plots for both phenotypes C2, results='hide'}
+subset_indices <- which(myGSEA.df_C2$NES > 0)
+
+# Check the length of the subset
+subset_length <- length(subset_indices)
+
+# Set the number of iterations based on the length
+iterations <- ifelse(subset_length < 15, subset_length, 15)
+
+for (i in 1:iterations){
+  name<-paste0("report/plots/FunctionalEnrichment/GSEA/C2/GSEAplot_C2_",condition1,"Enriched",i,".svg")
+  save_plot(name, gseaplot2(myGSEA.res_C2, 
+          geneSetID = which(myGSEA.df_C2$NES>0)[i], #can choose multiple signatures to overlay in this plot
+          pvalue_table = F, #can set this to FALSE for a cleaner plot
+          title = myGSEA.res_C2[myGSEA.df_C2$NES>0,]$Description[i]))
+}
+
+for (i in 1:iterations){
+  name<-paste0("report/plots/FunctionalEnrichment/GSEA/C2/GSEAplot_C2_",condition_control,"Enriched",i,".svg")
+  save_plot(name, gseaplot2(myGSEA.res_C2, 
+          geneSetID = which(myGSEA.df_C2$NES<0)[i], #can choose multiple signatures to overlay in this plot
+          pvalue_table = F, #can set this to FALSE for a cleaner plot
+          title = myGSEA.res_C2[myGSEA.df_C2$NES<0,]$Description[i]))
+}
+
 
 myGSEA.df_C2 <- myGSEA.df_C2 %>%
   mutate(phenotype = case_when(
@@ -746,7 +972,7 @@ myGSEA.df_C2$NES<-abs(myGSEA.df_C2$NES)
 ```{r table of functional enrichment C2 html only, eval=TRUE}
 datatable(myGSEA.df_C2, 
           extensions = c('KeyTable', "FixedHeader"), 
-          caption = "Table 8.1: Enrichment plots for both phenotypes in C2 Collection",
+          caption = "Table 6.1: Enrichment plots for both phenotypes in C2 Collection",
           options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100")))
 ```
 
@@ -772,6 +998,30 @@ gseaplot2(myGSEA.res_H,
 ```
 
 ```{r make enrichment plots for both phenotypes H, results='hide'}
+subset_indices <- which(myGSEA.df_H$NES > 0)
+
+# Check the length of the subset
+subset_length <- length(subset_indices)
+
+# Set the number of iterations based on the length
+iterations <- ifelse(subset_length < 15, subset_length, 15)
+
+for (i in 1:iterations){
+  name<-paste0("report/plots/FunctionalEnrichment/GSEA/H/GSEAplot_H_",condition1,"Enriched",i,".svg")
+  save_plot(name, gseaplot2(myGSEA.res_H, 
+          geneSetID = which(myGSEA.df_H$NES>0)[i], #can choose multiple signatures to overlay in this plot
+          pvalue_table = F, #can set this to FALSE for a cleaner plot
+          title = myGSEA.res_H[myGSEA.df_H$NES>0,]$Description[i]))
+}
+
+for (i in 1:iterations){
+  name<-paste0("report/plots/FunctionalEnrichment/GSEA/H/GSEAplot_H_",condition_control,"Enriched",i,".svg")
+  save_plot(name, gseaplot2(myGSEA.res_H, 
+          geneSetID = which(myGSEA.df_H$NES<0)[i], #can choose multiple signatures to overlay in this plot
+          pvalue_table = F, #can set this to FALSE for a cleaner plot
+          title = myGSEA.res_H[myGSEA.df_H$NES<0,]$Description[i]))
+}
+
 
 # add a variable to this result that matches enrichment direction with phenotype
 
@@ -781,14 +1031,15 @@ myGSEA.df_H <- myGSEA.df_H %>%
     NES < 0 ~ condition_control))
 myGSEA.df_H$NES<-abs(myGSEA.df_H$NES)
 
-
+dataset_names <- list("Hallmark Collection" = myGSEA.df_H, "C2 Collection" = myGSEA.df_C2)
+write.xlsx(dataset_names, file = 'report/tables/table8_functionalEnrichment.xlsx')
 ```
 
 ### Table
 ```{r table of functional enrichment H html only, eval=TRUE}
 datatable(myGSEA.df_H, 
           extensions = c('KeyTable', "FixedHeader"), 
-          caption = "Table 8.2: Enrichment plots for both phenotypes in H Collection",
+          caption = "Table 6.2: Enrichment plots for both phenotypes in H Collection",
           options = list(keys = TRUE, searchHighlight = TRUE, pageLength = 10, lengthMenu = c("10", "25", "50", "100")))
 ```
 
@@ -808,6 +1059,8 @@ bubbleplot_C2<-ggplot(myGSEA.df_C2[top$ix[1:20],], aes(x=phenotype, y=ID)) +
   labs(x = NULL, y = NULL)+
   scale_x_discrete(guide = guide_axis(angle = 60))
 
+save_plot("report/plots/FunctionalEnrichment/bubbleplotEnrichment_C2.svg", bubbleplot_C2)
+save_plot("report/plots/FunctionalEnrichment/bubbleplotEnrichment_C2.png", bubbleplot_C2)
 
 ggplotly(bubbleplot_C2)
 ```
@@ -825,6 +1078,8 @@ bubbleplot_H<-ggplot(myGSEA.df_H[top$ix[1:20],], aes(x=phenotype, y=ID)) +
   labs(x = NULL, y = NULL) +
   scale_x_discrete(guide = guide_axis(angle = 60))
 
+save_plot("report/plots/FunctionalEnrichment/bubbleplotEnrichment_H.svg", bubbleplot_H)
+save_plot("report/plots/FunctionalEnrichment/bubbleplotEnrichment_H.png", bubbleplot_H)
 
 ggplotly(bubbleplot_H)
 ```
