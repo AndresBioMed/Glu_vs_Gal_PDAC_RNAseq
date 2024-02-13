@@ -322,7 +322,7 @@ write.csv(log2.cpm.filtered.norm.df, "report/data/log2_cpm_filtered_norm.csv", r
 write.csv(log2.cpm.filtered.df, "report/data/log2_cpm_filtered.csv", row.names = F)
 ```
 
-```{r step 1 and 2 -filtered out samples-, fig.cap="Violin plots of log2 CPM values for each sample. A) Raw reads after mapping. B) Genes with more than 9 samples with CPM < 1 were filtered out. C) Normalisation with TMM. D) Tidy Samples with a positive FastQC Result to be used in the downstream analysis"}
+```{r step 1 and 2 -filtered out samples-, fig.cap="Violin plots of log2 CPM values for each sample. A) Raw reads after mapping. B) Genes with sufficient samples with CPM < 1 were filtered out. C) Normalisation with TMM. D) Tidy Samples with a positive FastQC Result to be used in the downstream analysis"}
 targets<-targets[!samples_nodepth,]
 path <- file.path(targets$sample, "abundance.tsv") # set file paths to your mapped data
 Tx <- transcripts(EnsDb.Hsapiens.v86, columns=c("tx_id", "gene_name"))
