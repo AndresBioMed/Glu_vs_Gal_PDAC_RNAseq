@@ -1253,7 +1253,7 @@
     },
     "biomaRt": {
       "Package": "biomaRt",
-      "Version": "2.58.1",
+      "Version": "2.58.2",
       "Source": "Bioconductor",
       "Repository": "Bioconductor 3.18",
       "Requirements": [
@@ -1269,7 +1269,7 @@
         "utils",
         "xml2"
       ],
-      "Hash": "606ee3eed6e247d19875c4b0fe36f620"
+      "Hash": "d6e043a6bfb4e2e256d00b8eee9c4266"
     },
     "bit": {
       "Package": "bit",
@@ -4114,8 +4114,14 @@
     },
     "treeio": {
       "Package": "treeio",
-      "Version": "1.26.0",
-      "Source": "Bioconductor",
+      "Version": "1.27.0.002",
+      "Source": "GitHub",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteUsername": "GuangchuangYu",
+      "RemoteRepo": "treeio",
+      "RemoteRef": "devel",
+      "RemoteSha": "c58405e2b3959e9e0dff9696a7de01f86fdae6c1",
       "Requirements": [
         "R",
         "ape",
@@ -4127,9 +4133,10 @@
         "stats",
         "tibble",
         "tidytree",
-        "utils"
+        "utils",
+        "yulab.utils"
       ],
-      "Hash": "a09203806aa0bc49965563ca7016620e"
+      "Hash": "c78faf4b992fe20f9f85e66d0af2ba36"
     },
     "tweenr": {
       "Package": "tweenr",
