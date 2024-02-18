@@ -16,6 +16,13 @@ output:
     number_sections: true
 ---
 
+```{r logo, echo=FALSE}
+htmltools::img(src = knitr::image_uri("logo.png"), 
+               alt = 'logo', 
+               style = 'position:absolute; top:0; right:0; width:150px; padding:10px;')
+
+```
+
 ```{css, echo=FALSE}
 /* Custom CSS to enhance styling */
 body {
@@ -90,7 +97,7 @@ knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
 
 ```{r settings}
 # Change title
-# Change and adapt lines 386-403, 489
+# Change and adapt lines 420_441, 536
 # Check the modules are ok on the heatmaps
 # Add and change the proper study design, keep it standard
 
@@ -99,6 +106,8 @@ condition_control<-"Adherent"
 explanation<- "Cancer Stem Cell enriched genes"
 discarded_samples<-c("ERR978114","ERR978145","ERR978189","ERR978196","ERR978218","ERR978226")
 nocpm_threshold<-29 #IMPORTANT PARAMETRE: minimum number of samples with CPM > 1
+p_value_threshold<-0.01
+logFC_threshold<-2
 species<-"Homo sapiens"
 
 
@@ -520,7 +529,7 @@ ggplotly(small_multiples_plot)
 
 An **important** note: all the contrasts, design matrix and differential expression analysis are made according to this formula ***(`r condition1` - `r condition_control`)***. This means that a *logfold change* > 0 shows that the first condition is upregulated, whereas a *logfold change* < 0 shows downregulation.
 
-```{r diffGenes volcano plot, warning=FALSE, fig.cap="Volcano plot of differencial gene expression.The lines delimit the 2 log-fold change and 0.01 adjusted p-value (FDR) thresholds."}
+```{r diffGenes volcano plot, warning=FALSE, fig.cap="Volcano plot of differencial gene expression.The lines delimit the log-fold change and adjusted p-value (FDR) thresholds."}
 design <- model.matrix(~0 + condition)
 colnames(design) <- levels(condition)
 
@@ -542,9 +551,9 @@ write.csv(myTopHits.df, "report/tables/differentialexpression_results.csv", row.
 vplot <- ggplot(myTopHits.df) +
   aes(y=-log10(adj.P.Val), x=logFC, text = paste("Symbol:", geneID)) +
   geom_point(size=2) +
-  geom_hline(yintercept = -log10(0.01), linetype="longdash", colour="grey", size=1) +
-  geom_vline(xintercept = 2, linetype="longdash", colour="#BE684D", size=1) +
-  geom_vline(xintercept = -2, linetype="longdash", colour="#2C467A", size=1) +
+  geom_hline(yintercept = -log10(p_value_threshold), linetype="longdash", colour="grey", size=1) +
+  geom_vline(xintercept = logFC_threshold, linetype="longdash", colour="#BE684D", size=1) +
+  geom_vline(xintercept = -logFC_threshold, linetype="longdash", colour="#2C467A", size=1) +
   #annotate("rect", xmin = 1, xmax = 12, ymin = -log10(0.01), ymax = 7.5, alpha=.2, fill="#BE684D") +
   #annotate("rect", xmin = -1, xmax = -12, ymin = -log10(0.01), ymax = 7.5, alpha=.2, fill="#2C467A") +
   labs(title="Volcano plot",
@@ -563,16 +572,16 @@ ggplotly(vplot)
 ```
 
 # MA Plot
-```{r MA Plot, fig.cap="The plot is an MA plot colored by False Discovery Rate (FDR). It shows the relationship between average expression level (AveExpr) and log fold change (logFC) for genes or features. Points are colored blue for FDR < 0.01 and red for FDR >= 0.01, aiding in identifying significant changes."}
-ma_color <- ifelse(myTopHits.df$adj.P.Val >= 0.01, "red", "blue")
+```{r MA Plot, fig.cap="The plot is an MA plot colored by False Discovery Rate (FDR). It shows the relationship between average expression level (AveExpr) and log fold change (logFC) for genes or features. Points are colored blue for FDR passed, or red for FDR not passed"}
+ma_color <- ifelse(myTopHits.df$adj.P.Val >= p_value_threshold, "red", "blue")
 
 # Plot
 ma_plot <- ggplot(myTopHits.df, aes(x = AveExpr, y = logFC,text = paste("Symbol:", geneID))) +
   geom_point(color=ma_color,shape = 16, size = 3, alpha = 0.6) +  # Adjust size and transparency
-  ggtitle("MA Plot Coloured by FDR Test>=0.01") +
+  ggtitle(paste0("MA Plot Coloured by FDR Test>=",p_value_threshold)) +
   theme_minimal() +  # Change to minimal theme for cleaner appearance
   labs(x = "Average Expression", y = "Log Fold Change", color = "FDR >= 0.01") +  # Add axis labels
-  scale_color_manual(values = c("blue", "red"), labels = c("FDR < 0.01", "FDR >= 0.01")) +  # Custom color scale
+  scale_color_manual(values = c("blue", "red"), labels = c(paste0("FDR <", p_value_threshold), paste0("FDR >=",p_value_threshold))) +  # Custom color scale
   theme(
     plot.title = element_text(size = 16, face = "bold", hjust = 0.5),  # Adjust title appearance
     axis.title = element_text(size = 14),  # Adjust axis label appearance
@@ -591,10 +600,10 @@ ggplotly(ma_plot)
 
 # Table of DEGs
 
-To identify differentially expressed genes, precision weights were first applied to each gene based on its mean-variance relationship using [VOOM](https://genomebiology.biomedcentral.com/articles/10.1186/gb-2014-15-2-r29), then data was normalized using the [TMM method](https://genomebiology.biomedcentral.com/articles/10.1186/gb-2010-11-3-r25) in [EdgeR](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2796818/). Linear modeling and bayesian stats were employed via [Limma](https://academic.oup.com/nar/article/43/7/e47/2414268) to find genes that were up- or down-regulated by **2-logfold or more, with a false-discovery rate (FDR) of 0.01**.
+To identify differentially expressed genes, precision weights were first applied to each gene based on its mean-variance relationship using [VOOM](https://genomebiology.biomedcentral.com/articles/10.1186/gb-2014-15-2-r29), then data was normalized using the [TMM method](https://genomebiology.biomedcentral.com/articles/10.1186/gb-2010-11-3-r25) in [EdgeR](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2796818/). Linear modeling and bayesian stats were employed via [Limma](https://academic.oup.com/nar/article/43/7/e47/2414268) to find genes that were up- or down-regulated by **`r logFC_threshold`-logfold or more, with a false-discovery rate (FDR) of `r p_value_threshold`**.
 
 ```{r step 5 - diffGenes part 2 (DEG table)}
-results <- decideTests(ebFit, method="global", adjust.method="BH", p.value=0.01, lfc=2)
+results <- decideTests(ebFit, method="global", adjust.method="BH", p.value=p_value_threshold, lfc=logFC_threshold)
 colnames(v.DEGList.filtered.norm$E) <- sampleLabels
 diffGenes <- v.DEGList.filtered.norm$E[results[,1] !=0,]
 diffGenes.df <- as_tibble(diffGenes, rownames = "geneID")
@@ -623,7 +632,7 @@ Transcript isoforms expression and usage change was analysed through the well-es
 All credits to:
 *Soneson et al. Differential analyses for RNA-seq: transcript-level estimates improve gene-level inferences. F1000Research 4, 1521 (2015).*
 
-```{r Isoform Switch Analyzer, message=FALSE, warning=F, results='hide'}
+```{r Isoform Switch Analyzer, message=FALSE, warning=F, results='hide', eval=FALSE}
 targets.mod <- targets %>%
   dplyr::rename(sampleID = sample, condition = condition) %>%
   dplyr::select(sampleID, condition)
@@ -663,12 +672,12 @@ write.csv(top_switches, "report/tables/table3_IsoformSwitchResults.csv")
 
 ```
 
-```{r summary of Isoform Switch, eval=TRUE}
+```{r summary of Isoform Switch, eval=FALSE}
 extractSwitchSummary(mySwitchList)
 
 ```
 
-```{r table 3 Isoform Switches only html}
+```{r table 3 Isoform Switches only html, eval=FALSE}
 
 datatable(top_switches[,-1],
           caption = 'Table 3: Top Isoform Switches',
@@ -680,7 +689,7 @@ datatable(top_switches[,-1],
                          lengthMenu = c("10", "25", "50", "100")))
 ```
 
-```{r example switchplot, fig.cap="Sample of a SwitchPlot. All SwitchPlots generated can be found in their corresponding folder."}
+```{r example switchplot, fig.cap="Sample of a SwitchPlot. All SwitchPlots generated can be found in their corresponding folder.", eval=FALSE}
 switchPlot(
   mySwitchList,
   gene=top_switches$gene_id[1],
