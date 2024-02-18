@@ -632,7 +632,7 @@ Transcript isoforms expression and usage change was analysed through the well-es
 All credits to:
 *Soneson et al. Differential analyses for RNA-seq: transcript-level estimates improve gene-level inferences. F1000Research 4, 1521 (2015).*
 
-```{r Isoform Switch Analyzer, message=FALSE, warning=F, results='hide', eval=FALSE}
+```{r Isoform Switch Analyzer, message=FALSE, warning=F, results='hide', eval=TRUE}
 targets.mod <- targets %>%
   dplyr::rename(sampleID = sample, condition = condition) %>%
   dplyr::select(sampleID, condition)
@@ -672,12 +672,12 @@ write.csv(top_switches, "report/tables/table3_IsoformSwitchResults.csv")
 
 ```
 
-```{r summary of Isoform Switch, eval=FALSE}
+```{r summary of Isoform Switch, eval=TRUE}
 extractSwitchSummary(mySwitchList)
 
 ```
 
-```{r table 3 Isoform Switches only html, eval=FALSE}
+```{r table 3 Isoform Switches only html, eval=TRUE}
 
 datatable(top_switches[,-1],
           caption = 'Table 3: Top Isoform Switches',
@@ -689,7 +689,7 @@ datatable(top_switches[,-1],
                          lengthMenu = c("10", "25", "50", "100")))
 ```
 
-```{r example switchplot, fig.cap="Sample of a SwitchPlot. All SwitchPlots generated can be found in their corresponding folder.", eval=FALSE}
+```{r example switchplot, fig.cap="Sample of a SwitchPlot. All SwitchPlots generated can be found in their corresponding folder.", eval=TRUE}
 switchPlot(
   mySwitchList,
   gene=top_switches$gene_id[1],
